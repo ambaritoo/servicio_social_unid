@@ -1,9 +1,20 @@
-import React from 'react'
+import React from 'react';
+import Navbar from '@/components/Navbar/Navbar';
+import Footer from '@/components/Footer/Footer';
 
-const SiteLayout = () => {
+const SiteLayout = ({ children }) => {
   return (
-    <div>SiteLayout</div>
-  )
-}
+    <div className="flex flex-col min-h-screen">
+      <Navbar />
+      <main className="flex-grow">
+        <div className='m-4'>
+          {children}
+        </div>
+        
+      </main>
+      <Footer />
+    </div>
+  );
+};
 
-export default SiteLayout
+export default SiteLayout;
