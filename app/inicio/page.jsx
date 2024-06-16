@@ -1,18 +1,12 @@
 import React from 'react'
 import SiteLayout from '../layout/SiteLayout'
 
-const pages = () => {
+const page = () => {
   return (
-    
-    <>
     <SiteLayout>
-    <div>Estudiantes</div>
+    <div>Inicio</div>
     </SiteLayout>
-    </>
-    
-   
-    
   )
 }
 
-export default pages
+export default page
