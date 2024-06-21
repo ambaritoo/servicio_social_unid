@@ -200,8 +200,8 @@ const Page = () => {
                     <DialogHeader>
                       <DialogTitle>Edit student</DialogTitle>
                       <DialogDescription>
-                        Make changes to the student here. Click save when you're
-                        done.
+                        Make changes to the student here. Click save when you
+                        are done.
                       </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleEditStudent}>
@@ -340,7 +340,7 @@ const Page = () => {
           <DialogHeader>
             <DialogTitle>Add new student</DialogTitle>
             <DialogDescription>
-              Add a new student here. Click save when you're done.
+              Add a new student here. Click save when you are done.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddStudent}>
