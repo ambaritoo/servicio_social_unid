@@ -16,7 +16,6 @@ const Page = () => {
         console.error("Error fetching data:", error);
         setError(error.message);
       } else {
-        console.log("Fetched data:", data);
         setEstudiantes(data);
       }
       setLoading(false);
