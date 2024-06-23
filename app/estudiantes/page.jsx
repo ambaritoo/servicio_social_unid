@@ -37,6 +37,7 @@ import {
 
 const Page = () => {
   const [estudiantes, setEstudiantes] = useState([]);
+  const [filteredEstudiantes, setFilteredEstudiantes] = useState([]);
   const [programas, setProgramas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -48,29 +49,26 @@ const Page = () => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
-      const {
-        data: estudiantesData,
-        error: estudiantesError,
-      } = await supabase.from("estudiantes").select("*");
+      const { data: estudiantesData, error: estudiantesError } = await supabase
+        .from("estudiantes")
+        .select("*");
 
-      const {
-        data: programasData,
-        error: programasError,
-      } = await supabase.from("programas_estudio").select("*");
+      const { data: programasData, error: programasError } = await supabase
+        .from("programas_estudio")
+        .select("*");
 
       if (estudiantesError || programasError) {
-        console.error(
-          "Error fetching data:",
-          estudiantesError || programasError
-        );
+        console.error("Error fetching data:", estudiantesError || programasError);
         setError(estudiantesError?.message || programasError?.message);
       } else {
         console.log("Estudiantes:", estudiantesData);
         console.log("Programas:", programasData);
         setEstudiantes(estudiantesData);
+        setFilteredEstudiantes(estudiantesData);
         setProgramas(programasData);
       }
       setLoading(false);
@@ -94,9 +92,8 @@ const Page = () => {
       if (error) {
         alert("Error deleting student:", error.message);
       } else {
-        setEstudiantes(
-          estudiantes.filter((estudiante) => estudiante.id !== id)
-        );
+        setEstudiantes(estudiantes.filter((estudiante) => estudiante.id !== id));
+        setFilteredEstudiantes(filteredEstudiantes.filter((estudiante) => estudiante.id !== id));
         setPassword("");
         setIsDeleteOpen(false); // Close the delete dialog
       }
@@ -122,6 +119,7 @@ const Page = () => {
       alert("Error adding student:", error.message);
     } else {
       setEstudiantes([...estudiantes, ...data]);
+      setFilteredEstudiantes([...filteredEstudiantes, ...data]);
       setNombre("");
       setNumeroControl("");
       setProgramaId("");
@@ -133,22 +131,15 @@ const Page = () => {
     event.preventDefault();
     const { data, error } = await supabase
       .from("estudiantes")
-      .update({
-        nombre,
-        numero_control: numeroControl,
-        programa_id: programaId,
-      })
+      .update({ nombre, numero_control: numeroControl, programa_id: programaId })
       .eq("id", selectedEstudiante.id)
       .select();
 
     if (error) {
       alert("Error updating student:", error.message);
     } else {
-      setEstudiantes(
-        estudiantes.map((est) =>
-          est.id === selectedEstudiante.id ? data[0] : est
-        )
-      );
+      setEstudiantes(estudiantes.map((est) => (est.id === selectedEstudiante.id ? data[0] : est)));
+      setFilteredEstudiantes(filteredEstudiantes.map((est) => (est.id === selectedEstudiante.id ? data[0] : est)));
       setSelectedEstudiante(null);
       setIsEditOpen(false); // Close the edit dialog
     }
@@ -162,25 +153,43 @@ const Page = () => {
     setIsEditOpen(true);
   };
 
+  const handleSearch = (term) => {
+    const filtered = estudiantes.filter(
+      (estudiante) =>
+        estudiante.nombre.toLowerCase().includes(term.toLowerCase()) || estudiante.numero_control.includes(term)
+    );
+    setFilteredEstudiantes(filtered);
+  };
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 
   return (
     <SiteLayout>
       <div>Estudiantes</div>
+      <div className="mb-4">
+        <Input
+          placeholder="Buscar por Nombre o ID"
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            handleSearch(e.target.value);
+          }}
+        />
+      </div>
       <Table>
         <TableCaption>Lista de Estudiantes</TableCaption>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[100px]">ID</TableHead>
-            <TableHead>Número de Control</TableHead>
+            <TableHead className="w-[100px]">Número</TableHead>
+            <TableHead>ID</TableHead>
             <TableHead>Nombre</TableHead>
             <TableHead>Programa</TableHead>
             <TableHead>Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {estudiantes.map((estudiante) => (
+          {filteredEstudiantes.map((estudiante) => (
             <TableRow key={estudiante.id}>
               <TableCell className="font-medium">{estudiante.id}</TableCell>
               <TableCell>{estudiante.numero_control}</TableCell>
@@ -200,8 +209,7 @@ const Page = () => {
                     <DialogHeader>
                       <DialogTitle>Edit student</DialogTitle>
                       <DialogDescription>
-                        Make changes to the student here. Click save when you
-                        are done.
+                        Make changes to the student here. Click save when you're done.
                       </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleEditStudent}>
@@ -218,10 +226,7 @@ const Page = () => {
                           />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
-                          <Label
-                            htmlFor="edit-numeroControl"
-                            className="text-right"
-                          >
+                          <Label htmlFor="edit-numeroControl" className="text-right">
                             Número de Control
                           </Label>
                           <Input
@@ -232,32 +237,23 @@ const Page = () => {
                           />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
-                          <Label
-                            htmlFor="edit-programaId"
-                            className="text-right"
-                          >
+                          <Label htmlFor="edit-programaId" className="text-right">
                             Programa
                           </Label>
                           <Select
                             value={programaId.toString()}
-                            onValueChange={(value) =>
-                              setProgramaId(parseInt(value))
-                            }
+                            onValueChange={(value) => setProgramaId(parseInt(value))}
                           >
                             <SelectTrigger className="col-span-3">
                               <SelectValue>
-                                {getProgramaNombre(programaId) ||
-                                  "Select a program"}
+                                {getProgramaNombre(programaId) || "Select a program"}
                               </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                               <SelectGroup>
                                 <SelectLabel>Programas</SelectLabel>
                                 {programas.map((programa) => (
-                                  <SelectItem
-                                    key={programa.id}
-                                    value={programa.id.toString()}
-                                  >
+                                  <SelectItem key={programa.id} value={programa.id.toString()}>
                                     {programa.nombre}
                                   </SelectItem>
                                 ))}
@@ -296,10 +292,7 @@ const Page = () => {
                     >
                       <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
-                          <Label
-                            htmlFor="delete-password"
-                            className="text-right"
-                          >
+                          <Label htmlFor="delete-password" className="text-right">
                             Password
                           </Label>
                           <Input
@@ -323,16 +316,17 @@ const Page = () => {
         </TableBody>
         <TableFooter>
           <TableRow>
-            <TableCell colSpan={5}>
-              Total de Estudiantes: {estudiantes.length}
-            </TableCell>
+            <TableCell colSpan={5}>Total de Estudiantes: {estudiantes.length}</TableCell>
           </TableRow>
         </TableFooter>
       </Table>
 
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
         <DialogTrigger asChild>
-          <Button variant="outline" onClick={() => setIsAddOpen(true)}>
+          <Button
+            variant="outline"
+            onClick={() => setIsAddOpen(true)}
+          >
             Add Student
           </Button>
         </DialogTrigger>
@@ -340,7 +334,7 @@ const Page = () => {
           <DialogHeader>
             <DialogTitle>Add new student</DialogTitle>
             <DialogDescription>
-              Add a new student here. Click save when you are done.
+              Add a new student here. Click save when you're done.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddStudent}>
@@ -384,10 +378,7 @@ const Page = () => {
                     <SelectGroup>
                       <SelectLabel>Programas</SelectLabel>
                       {programas.map((programa) => (
-                        <SelectItem
-                          key={programa.id}
-                          value={programa.id.toString()}
-                        >
+                        <SelectItem key={programa.id} value={programa.id.toString()}>
                           {programa.nombre}
                         </SelectItem>
                       ))}

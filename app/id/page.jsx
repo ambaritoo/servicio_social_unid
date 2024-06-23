@@ -4,7 +4,7 @@ import SiteLayout from '../layout/SiteLayout'
 const page = () => {
   return (
     <SiteLayout>
-    <div>ID</div>
+    <div>id</div>
     </SiteLayout>
   )
 }
