@@ -28,9 +28,9 @@ const Navbar = () => {
           </div>
           <div className="flex items-center">
             <div className="hidden sm:ml-6 sm:flex sm:items-center">
-              <button className="text-gray-500 hover:text-gray-700 focus:outline-none focus:text-gray-700">
+            <Link href="/login" className="text-gray-500 hover:text-gray-700 focus:outline-none focus:text-gray-700">
                 Iniciar Sesión
-              </button>
+              </Link>
             </div>
             <div className="-mr-2 flex items-center sm:hidden">
               <button
