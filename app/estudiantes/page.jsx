@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RiseLoader } from "react-spinners";
 
 const Page = () => {
   const [estudiantes, setEstudiantes] = useState([]);
@@ -282,7 +283,18 @@ const Page = () => {
     setFilteredEstudiantes(filtered);
   };
 
-  if (loading) return <div>Cargando...</div>;
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh'
+      }}>
+        <RiseLoader color="#508fb3" loading={loading} />
+      </div>
+    );
+  }
   if (error) return <div>Error: {error}</div>;
 
   return (
@@ -622,7 +634,10 @@ const Page = () => {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="numeroControl" className="text-right">
+                <Label
+                  htmlFor="numeroControl"
+                  className="text-right"
+                >
                   Número de Control
                 </Label>
                 <Input
@@ -642,8 +657,7 @@ const Page = () => {
                 >
                   <SelectTrigger className="col-span-3">
                     <SelectValue>
-                      {getProgramaNombre(programaId) ||
-                        "Selecciona un programa"}
+                      {getProgramaNombre(programaId) || "Selecciona un programa"}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
