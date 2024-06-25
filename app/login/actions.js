@@ -15,7 +15,6 @@ export async function login(formData) {
     return { success: false, message: "Error al iniciar sesión: " + error.message };
   } else {
     console.log("Inicio de sesión exitoso para el usuario:", session.user.email);
-
     return { success: true, message: "Inicio de sesión exitoso para el usuario: " + session.user.email };
   }
 }

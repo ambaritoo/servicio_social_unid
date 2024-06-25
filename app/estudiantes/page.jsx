@@ -35,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RiseLoader } from "react-spinners";
 
 
 
@@ -99,7 +100,9 @@ const Page = () => {
             actividad_id,
             fecha_inicio,
             fecha_fin,
-            fecha_constancia
+            fecha_constancia,
+            empresas ( nombre ),
+            actividades ( descripcion )
           )
         `);
 
@@ -230,7 +233,7 @@ const Page = () => {
 
   const handleEditStudent = async (event) => {
     event.preventDefault();
-    const { data, error } = await supabase
+    const { data: updatedEstudiante, error: estudianteError } = await supabase
       .from("estudiantes")
       .update({
         nombre,
@@ -240,8 +243,8 @@ const Page = () => {
       .eq("id", selectedEstudiante.id)
       .select();
 
-    if (error) {
-      alert("Error updating student:", error.message);
+    if (estudianteError) {
+      alert("Error updating student:", estudianteError.message);
     } else {
       const updatedStudent = {
         ...data[0],
@@ -271,6 +274,7 @@ const Page = () => {
   };
 
   const openEditDialog = (estudiante) => {
+    const servicioSocial = estudiante.servicio_social?.[0] || {};
     setSelectedEstudiante(estudiante);
     setNombre(estudiante.nombre);
     setNumeroControl(estudiante.numero_control);
@@ -302,7 +306,18 @@ const Page = () => {
     setFilteredEstudiantes(filtered);
   };
 
-  if (loading) return <div>Cargando...</div>;
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh'
+      }}>
+        <RiseLoader color="#508fb3" loading={loading} />
+      </div>
+    );
+  }
   if (error) return <div>Error: {error}</div>;
 
   return (
@@ -310,7 +325,7 @@ const Page = () => {
       <div>Estudiantes</div>
       <div className="mb-4">
         <Input
-          placeholder="Buscar por Nombre o Número de Control"
+          placeholder="Buscar por Nombre, Número de Control, Programa, Empresa, Actividad, etc."
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
@@ -617,7 +632,10 @@ const Page = () => {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="numeroControl" className="text-right">
+                <Label
+                  htmlFor="numeroControl"
+                  className="text-right"
+                >
                   Número de Control
                 </Label>
                 <Input
@@ -637,8 +655,7 @@ const Page = () => {
                 >
                   <SelectTrigger className="col-span-3">
                     <SelectValue>
-                      {getProgramaNombre(programaId) ||
-                        "Selecciona un programa"}
+                      {getProgramaNombre(programaId) || "Selecciona un programa"}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
