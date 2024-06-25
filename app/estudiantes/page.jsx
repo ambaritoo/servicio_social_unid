@@ -63,7 +63,9 @@ const Page = () => {
             actividad_id,
             fecha_inicio,
             fecha_fin,
-            fecha_constancia
+            fecha_constancia,
+            empresas ( nombre ),
+            actividades ( descripcion )
           )
         `);
 
@@ -188,11 +190,23 @@ const Page = () => {
   };
 
   const handleSearch = (term) => {
-    const filtered = estudiantes.filter(
-      (estudiante) =>
+    const filtered = estudiantes.filter((estudiante) => {
+      const programaNombre = getProgramaNombre(
+        estudiante.programa_id
+      ).toLowerCase();
+      const empresaNombre =
+        estudiante.servicio_social?.[0]?.empresas?.nombre?.toLowerCase() || "";
+      const actividadDescripcion =
+        estudiante.servicio_social?.[0]?.actividades?.descripcion?.toLowerCase() ||
+        "";
+      return (
         estudiante.nombre.toLowerCase().includes(term.toLowerCase()) ||
-        estudiante.numero_control.includes(term)
-    );
+        estudiante.numero_control.includes(term) ||
+        programaNombre.includes(term.toLowerCase()) ||
+        empresaNombre.includes(term.toLowerCase()) ||
+        actividadDescripcion.includes(term.toLowerCase())
+      );
+    });
     setFilteredEstudiantes(filtered);
   };
 
@@ -204,7 +218,7 @@ const Page = () => {
       <div>Estudiantes</div>
       <div className="mb-4">
         <Input
-          placeholder="Buscar por Nombre o Número de Control"
+          placeholder="Buscar por Nombre, Número de Control, Programa, Empresa, Actividad, etc."
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
@@ -239,11 +253,17 @@ const Page = () => {
                 <TableCell>
                   {getProgramaNombre(estudiante.programa_id)}
                 </TableCell>
-                <TableCell>{servicioSocial.empresa_id}</TableCell>
-                <TableCell>{servicioSocial.actividad_id}</TableCell>
-                <TableCell>{servicioSocial.fecha_inicio}</TableCell>
-                <TableCell>{servicioSocial.fecha_fin}</TableCell>
-                <TableCell>{servicioSocial.fecha_constancia}</TableCell>
+                <TableCell>
+                  {servicioSocial.empresas?.nombre || "N/A"}
+                </TableCell>
+                <TableCell>
+                  {servicioSocial.actividades?.descripcion || "N/A"}
+                </TableCell>
+                <TableCell>{servicioSocial.fecha_inicio || "N/A"}</TableCell>
+                <TableCell>{servicioSocial.fecha_fin || "N/A"}</TableCell>
+                <TableCell>
+                  {servicioSocial.fecha_constancia || "N/A"}
+                </TableCell>
                 <TableCell>
                   <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
                     <DialogTrigger asChild>
