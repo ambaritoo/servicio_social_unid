@@ -53,16 +53,30 @@ const Page = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: estudiantesData, error: estudiantesError } = await supabase
-        .from("estudiantes")
-        .select("*");
+      const {
+        data: estudiantesData,
+        error: estudiantesError,
+      } = await supabase.from("estudiantes").select(`
+          *,
+          servicio_social (
+            empresa_id,
+            actividad_id,
+            fecha_inicio,
+            fecha_fin,
+            fecha_constancia
+          )
+        `);
 
-      const { data: programasData, error: programasError } = await supabase
-        .from("programas_estudio")
-        .select("*");
+      const {
+        data: programasData,
+        error: programasError,
+      } = await supabase.from("programas_estudio").select("*");
 
       if (estudiantesError || programasError) {
-        console.error("Error fetching data:", estudiantesError || programasError);
+        console.error(
+          "Error fetching data:",
+          estudiantesError || programasError
+        );
         setError(estudiantesError?.message || programasError?.message);
       } else {
         console.log("Estudiantes:", estudiantesData);
@@ -92,8 +106,12 @@ const Page = () => {
       if (error) {
         alert("Error deleting student:", error.message);
       } else {
-        setEstudiantes(estudiantes.filter((estudiante) => estudiante.id !== id));
-        setFilteredEstudiantes(filteredEstudiantes.filter((estudiante) => estudiante.id !== id));
+        setEstudiantes(
+          estudiantes.filter((estudiante) => estudiante.id !== id)
+        );
+        setFilteredEstudiantes(
+          filteredEstudiantes.filter((estudiante) => estudiante.id !== id)
+        );
         setPassword("");
         setIsDeleteOpen(false); // Close the delete dialog
       }
@@ -118,8 +136,12 @@ const Page = () => {
     if (error) {
       alert("Error adding student:", error.message);
     } else {
-      setEstudiantes([...estudiantes, ...data]);
-      setFilteredEstudiantes([...filteredEstudiantes, ...data]);
+      const newStudent = {
+        ...data[0],
+        servicio_social: [],
+      };
+      setEstudiantes([...estudiantes, newStudent]);
+      setFilteredEstudiantes([...filteredEstudiantes, newStudent]);
       setNombre("");
       setNumeroControl("");
       setProgramaId("");
@@ -131,15 +153,27 @@ const Page = () => {
     event.preventDefault();
     const { data, error } = await supabase
       .from("estudiantes")
-      .update({ nombre, numero_control: numeroControl, programa_id: programaId })
+      .update({
+        nombre,
+        numero_control: numeroControl,
+        programa_id: programaId,
+      })
       .eq("id", selectedEstudiante.id)
       .select();
 
     if (error) {
       alert("Error updating student:", error.message);
     } else {
-      setEstudiantes(estudiantes.map((est) => (est.id === selectedEstudiante.id ? data[0] : est)));
-      setFilteredEstudiantes(filteredEstudiantes.map((est) => (est.id === selectedEstudiante.id ? data[0] : est)));
+      setEstudiantes(
+        estudiantes.map((est) =>
+          est.id === selectedEstudiante.id ? data[0] : est
+        )
+      );
+      setFilteredEstudiantes(
+        filteredEstudiantes.map((est) =>
+          est.id === selectedEstudiante.id ? data[0] : est
+        )
+      );
       setSelectedEstudiante(null);
       setIsEditOpen(false); // Close the edit dialog
     }
@@ -156,12 +190,13 @@ const Page = () => {
   const handleSearch = (term) => {
     const filtered = estudiantes.filter(
       (estudiante) =>
-        estudiante.nombre.toLowerCase().includes(term.toLowerCase()) || estudiante.numero_control.includes(term)
+        estudiante.nombre.toLowerCase().includes(term.toLowerCase()) ||
+        estudiante.numero_control.includes(term)
     );
     setFilteredEstudiantes(filtered);
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div>Cargando...</div>;
   if (error) return <div>Error: {error}</div>;
 
   return (
@@ -169,7 +204,7 @@ const Page = () => {
       <div>Estudiantes</div>
       <div className="mb-4">
         <Input
-          placeholder="Buscar por Nombre o ID"
+          placeholder="Buscar por Nombre o Número de Control"
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
@@ -182,166 +217,197 @@ const Page = () => {
         <TableHeader>
           <TableRow>
             <TableHead className="w-[100px]">Número</TableHead>
-            <TableHead>ID</TableHead>
+            <TableHead>Número de Control</TableHead>
             <TableHead>Nombre</TableHead>
             <TableHead>Programa</TableHead>
+            <TableHead>Empresa</TableHead>
+            <TableHead>Actividad</TableHead>
+            <TableHead>Fecha de Inicio</TableHead>
+            <TableHead>Fecha de Fin</TableHead>
+            <TableHead>Fecha de Constancia</TableHead>
             <TableHead>Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredEstudiantes.map((estudiante) => (
-            <TableRow key={estudiante.id}>
-              <TableCell className="font-medium">{estudiante.id}</TableCell>
-              <TableCell>{estudiante.numero_control}</TableCell>
-              <TableCell>{estudiante.nombre}</TableCell>
-              <TableCell>{getProgramaNombre(estudiante.programa_id)}</TableCell>
-              <TableCell>
-                <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      onClick={() => openEditDialog(estudiante)}
-                    >
-                      Edit
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                      <DialogTitle>Edit student</DialogTitle>
-                      <DialogDescription>
-                        Make changes to the student here. Click save when you're done.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleEditStudent}>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="edit-name" className="text-right">
-                            Name
-                          </Label>
-                          <Input
-                            id="edit-name"
-                            value={nombre}
-                            className="col-span-3"
-                            onChange={(e) => setNombre(e.target.value)}
-                          />
+          {filteredEstudiantes.map((estudiante) => {
+            const servicioSocial = estudiante.servicio_social?.[0] || {};
+            return (
+              <TableRow key={estudiante.id}>
+                <TableCell className="font-medium">{estudiante.id}</TableCell>
+                <TableCell>{estudiante.numero_control}</TableCell>
+                <TableCell>{estudiante.nombre}</TableCell>
+                <TableCell>
+                  {getProgramaNombre(estudiante.programa_id)}
+                </TableCell>
+                <TableCell>{servicioSocial.empresa_id}</TableCell>
+                <TableCell>{servicioSocial.actividad_id}</TableCell>
+                <TableCell>{servicioSocial.fecha_inicio}</TableCell>
+                <TableCell>{servicioSocial.fecha_fin}</TableCell>
+                <TableCell>{servicioSocial.fecha_constancia}</TableCell>
+                <TableCell>
+                  <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        onClick={() => openEditDialog(estudiante)}
+                      >
+                        Editar
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[425px]">
+                      <DialogHeader>
+                        <DialogTitle>Editar Estudiante</DialogTitle>
+                        <DialogDescription>
+                          Realiza cambios en la información del estudiante. Haz
+                          clic en guardar cuando termines.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <form onSubmit={handleEditStudent}>
+                        <div className="grid gap-4 py-4">
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="edit-name" className="text-right">
+                              Nombre
+                            </Label>
+                            <Input
+                              id="edit-name"
+                              value={nombre}
+                              className="col-span-3"
+                              onChange={(e) => setNombre(e.target.value)}
+                            />
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label
+                              htmlFor="edit-numeroControl"
+                              className="text-right"
+                            >
+                              Número de Control
+                            </Label>
+                            <Input
+                              id="edit-numeroControl"
+                              value={numeroControl}
+                              className="col-span-3"
+                              onChange={(e) => setNumeroControl(e.target.value)}
+                            />
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label
+                              htmlFor="edit-programaId"
+                              className="text-right"
+                            >
+                              Programa
+                            </Label>
+                            <Select
+                              value={programaId.toString()}
+                              onValueChange={(value) =>
+                                setProgramaId(parseInt(value))
+                              }
+                            >
+                              <SelectTrigger className="col-span-3">
+                                <SelectValue>
+                                  {getProgramaNombre(programaId) ||
+                                    "Selecciona un programa"}
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
+                                  <SelectLabel>Programas</SelectLabel>
+                                  {programas.map((programa) => (
+                                    <SelectItem
+                                      key={programa.id}
+                                      value={programa.id.toString()}
+                                    >
+                                      {programa.nombre}
+                                    </SelectItem>
+                                  ))}
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="edit-numeroControl" className="text-right">
-                            Número de Control
-                          </Label>
-                          <Input
-                            id="edit-numeroControl"
-                            value={numeroControl}
-                            className="col-span-3"
-                            onChange={(e) => setNumeroControl(e.target.value)}
-                          />
+                        <DialogFooter>
+                          <Button type="submit">Guardar cambios</Button>
+                        </DialogFooter>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                  <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsDeleteOpen(true)}
+                      >
+                        Eliminar
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[425px]">
+                      <DialogHeader>
+                        <DialogTitle>Eliminar Estudiante</DialogTitle>
+                        <DialogDescription>
+                          Ingresa la contraseña para eliminar este estudiante.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          handleDelete(estudiante.id);
+                        }}
+                      >
+                        <div className="grid gap-4 py-4">
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label
+                              htmlFor="delete-password"
+                              className="text-right"
+                            >
+                              Contraseña
+                            </Label>
+                            <Input
+                              id="delete-password"
+                              type="password"
+                              value={password}
+                              className="col-span-3"
+                              onChange={(e) => setPassword(e.target.value)}
+                            />
+                          </div>
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="edit-programaId" className="text-right">
-                            Programa
-                          </Label>
-                          <Select
-                            value={programaId.toString()}
-                            onValueChange={(value) => setProgramaId(parseInt(value))}
-                          >
-                            <SelectTrigger className="col-span-3">
-                              <SelectValue>
-                                {getProgramaNombre(programaId) || "Select a program"}
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectGroup>
-                                <SelectLabel>Programas</SelectLabel>
-                                {programas.map((programa) => (
-                                  <SelectItem key={programa.id} value={programa.id.toString()}>
-                                    {programa.nombre}
-                                  </SelectItem>
-                                ))}
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button type="submit">Save changes</Button>
-                      </DialogFooter>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-                <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsDeleteOpen(true)}
-                    >
-                      Delete
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                      <DialogTitle>Delete student</DialogTitle>
-                      <DialogDescription>
-                        Enter the password to delete this student.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        handleDelete(estudiante.id);
-                      }}
-                    >
-                      <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="delete-password" className="text-right">
-                            Password
-                          </Label>
-                          <Input
-                            id="delete-password"
-                            type="password"
-                            value={password}
-                            className="col-span-3"
-                            onChange={(e) => setPassword(e.target.value)}
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button type="submit">Delete</Button>
-                      </DialogFooter>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              </TableCell>
-            </TableRow>
-          ))}
+                        <DialogFooter>
+                          <Button type="submit">Eliminar</Button>
+                        </DialogFooter>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
         <TableFooter>
           <TableRow>
-            <TableCell colSpan={5}>Total de Estudiantes: {estudiantes.length}</TableCell>
+            <TableCell colSpan={10}>
+              Total de Estudiantes: {estudiantes.length}
+            </TableCell>
           </TableRow>
         </TableFooter>
       </Table>
 
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
         <DialogTrigger asChild>
-          <Button
-            variant="outline"
-            onClick={() => setIsAddOpen(true)}
-          >
-            Add Student
+          <Button variant="outline" onClick={() => setIsAddOpen(true)}>
+            Agregar Estudiante
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Add new student</DialogTitle>
+            <DialogTitle>Agregar nuevo estudiante</DialogTitle>
             <DialogDescription>
-              Add a new student here. Click save when you're done.
+              Agrega un nuevo estudiante aquí. Haz clic en guardar cuando
+              termines.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddStudent}>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="name" className="text-right">
-                  Name
+                  Nombre
                 </Label>
                 <Input
                   id="name"
@@ -371,14 +437,18 @@ const Page = () => {
                 >
                   <SelectTrigger className="col-span-3">
                     <SelectValue>
-                      {getProgramaNombre(programaId) || "Select a program"}
+                      {getProgramaNombre(programaId) ||
+                        "Selecciona un programa"}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
                       <SelectLabel>Programas</SelectLabel>
                       {programas.map((programa) => (
-                        <SelectItem key={programa.id} value={programa.id.toString()}>
+                        <SelectItem
+                          key={programa.id}
+                          value={programa.id.toString()}
+                        >
                           {programa.nombre}
                         </SelectItem>
                       ))}
@@ -388,7 +458,7 @@ const Page = () => {
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit">Save changes</Button>
+              <Button type="submit">Guardar cambios</Button>
             </DialogFooter>
           </form>
         </DialogContent>
