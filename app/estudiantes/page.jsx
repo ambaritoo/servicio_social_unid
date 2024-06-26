@@ -49,7 +49,9 @@ const Page = () => {
   const [numeroControl, setNumeroControl] = useState("");
   const [programaId, setProgramaId] = useState("");
   const [empresaId, setEmpresaId] = useState("");
+  const [nuevaEmpresa, setNuevaEmpresa] = useState("");
   const [actividadId, setActividadId] = useState("");
+  const [nuevaActividad, setNuevaActividad] = useState("");
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin, setFechaFin] = useState("");
   const [fechaConstancia, setFechaConstancia] = useState("");
@@ -168,6 +170,46 @@ const Page = () => {
 
   const handleAddStudent = async (event) => {
     event.preventDefault();
+
+    // Verificar si el número de control ya existe
+    const { data: existingStudent, error: existingError } = await supabase
+      .from("estudiantes")
+      .select("*")
+      .eq("numero_control", numeroControl);
+
+    if (existingStudent && existingStudent.length > 0) {
+      alert("El número de control ya existe. No se puede duplicar.");
+      return;
+    }
+
+    if (empresaId === "otro" && nuevaEmpresa) {
+      const { data, error } = await supabase
+        .from("empresas")
+        .insert([{ nombre: nuevaEmpresa }])
+        .select();
+      if (error) {
+        alert("Error adding new empresa:", error.message);
+        return;
+      }
+      setEmpresaId(data[0].id);
+      setEmpresas([...empresas, data[0]]);
+      setNuevaEmpresa("");
+    }
+
+    if (actividadId === "otro" && nuevaActividad) {
+      const { data, error } = await supabase
+        .from("actividades")
+        .insert([{ descripcion: nuevaActividad }])
+        .select();
+      if (error) {
+        alert("Error adding new actividad:", error.message);
+        return;
+      }
+      setActividadId(data[0].id);
+      setActividades([...actividades, data[0]]);
+      setNuevaActividad("");
+    }
+
     const { data, error } = await supabase
       .from("estudiantes")
       .insert([
@@ -191,12 +233,43 @@ const Page = () => {
       setNombre("");
       setNumeroControl("");
       setProgramaId("");
+      setEmpresaId("");
+      setActividadId("");
       setIsAddOpen(false); // Close the add dialog
     }
   };
 
   const handleEditStudent = async (event) => {
     event.preventDefault();
+
+    if (empresaId === "otro" && nuevaEmpresa) {
+      const { data, error } = await supabase
+        .from("empresas")
+        .insert([{ nombre: nuevaEmpresa }])
+        .select();
+      if (error) {
+        alert("Error adding new empresa:", error.message);
+        return;
+      }
+      setEmpresaId(data[0].id);
+      setEmpresas([...empresas, data[0]]);
+      setNuevaEmpresa("");
+    }
+
+    if (actividadId === "otro" && nuevaActividad) {
+      const { data, error } = await supabase
+        .from("actividades")
+        .insert([{ descripcion: nuevaActividad }])
+        .select();
+      if (error) {
+        alert("Error adding new actividad:", error.message);
+        return;
+      }
+      setActividadId(data[0].id);
+      setActividades([...actividades, data[0]]);
+      setNuevaActividad("");
+    }
+
     const { data: updatedEstudiante, error: estudianteError } = await supabase
       .from("estudiantes")
       .update({
@@ -434,9 +507,7 @@ const Page = () => {
                             </Label>
                             <Select
                               value={empresaId.toString()}
-                              onValueChange={(value) =>
-                                setEmpresaId(parseInt(value))
-                              }
+                              onValueChange={(value) => setEmpresaId(value)}
                             >
                               <SelectTrigger className="col-span-3">
                                 <SelectValue>
@@ -455,10 +526,27 @@ const Page = () => {
                                       {empresa.nombre}
                                     </SelectItem>
                                   ))}
+                                  <SelectItem value="otro">Otro</SelectItem>
                                 </SelectGroup>
                               </SelectContent>
                             </Select>
                           </div>
+                          {empresaId === "otro" && (
+                            <div className="grid grid-cols-4 items-center gap-4">
+                              <Label
+                                htmlFor="nueva-empresa"
+                                className="text-right"
+                              >
+                                Nueva Empresa
+                              </Label>
+                              <Input
+                                id="nueva-empresa"
+                                value={nuevaEmpresa}
+                                className="col-span-3"
+                                onChange={(e) => setNuevaEmpresa(e.target.value)}
+                              />
+                            </div>
+                          )}
                           <div className="grid grid-cols-4 items-center gap-4">
                             <Label
                               htmlFor="edit-actividadId"
@@ -468,9 +556,7 @@ const Page = () => {
                             </Label>
                             <Select
                               value={actividadId.toString()}
-                              onValueChange={(value) =>
-                                setActividadId(parseInt(value))
-                              }
+                              onValueChange={(value) => setActividadId(value)}
                             >
                               <SelectTrigger className="col-span-3">
                                 <SelectValue>
@@ -489,10 +575,29 @@ const Page = () => {
                                       {actividad.descripcion}
                                     </SelectItem>
                                   ))}
+                                  <SelectItem value="otro">Otro</SelectItem>
                                 </SelectGroup>
                               </SelectContent>
                             </Select>
                           </div>
+                          {actividadId === "otro" && (
+                            <div className="grid grid-cols-4 items-center gap-4">
+                              <Label
+                                htmlFor="nueva-actividad"
+                                className="text-right"
+                              >
+                                Nueva Actividad
+                              </Label>
+                              <Input
+                                id="nueva-actividad"
+                                value={nuevaActividad}
+                                className="col-span-3"
+                                onChange={(e) =>
+                                  setNuevaActividad(e.target.value)
+                                }
+                              />
+                            </div>
+                          )}
                           <div className="grid grid-cols-4 items-center gap-4">
                             <Label
                               htmlFor="edit-fechaInicio"
@@ -675,6 +780,101 @@ const Page = () => {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="empresaId" className="text-right">
+                  Empresa
+                </Label>
+                <Select
+                  value={empresaId.toString()}
+                  onValueChange={(value) => setEmpresaId(value)}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue>
+                      {getEmpresaNombre(empresaId) ||
+                        "Selecciona una empresa"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Empresas</SelectLabel>
+                      {empresas.map((empresa) => (
+                        <SelectItem
+                          key={empresa.id}
+                          value={empresa.id.toString()}
+                        >
+                          {empresa.nombre}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="otro">Otro</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+              {empresaId === "otro" && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label
+                    htmlFor="nueva-empresa"
+                    className="text-right"
+                  >
+                    Nueva Empresa
+                  </Label>
+                  <Input
+                    id="nueva-empresa"
+                    value={nuevaEmpresa}
+                    className="col-span-3"
+                    onChange={(e) => setNuevaEmpresa(e.target.value)}
+                  />
+                </div>
+              )}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label
+                  htmlFor="actividadId"
+                  className="text-right"
+                >
+                  Actividad
+                </Label>
+                <Select
+                  value={actividadId.toString()}
+                  onValueChange={(value) => setActividadId(value)}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue>
+                      {getActividadDescripcion(actividadId) ||
+                        "Selecciona una actividad"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Actividades</SelectLabel>
+                      {actividades.map((actividad) => (
+                        <SelectItem
+                          key={actividad.id}
+                          value={actividad.id.toString()}
+                        >
+                          {actividad.descripcion}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="otro">Otro</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+              {actividadId === "otro" && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label
+                    htmlFor="nueva-actividad"
+                    className="text-right"
+                  >
+                    Nueva Actividad
+                  </Label>
+                  <Input
+                    id="nueva-actividad"
+                    value={nuevaActividad}
+                    className="col-span-3"
+                    onChange={(e) => setNuevaActividad(e.target.value)}
+                  />
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button type="submit">Guardar cambios</Button>
