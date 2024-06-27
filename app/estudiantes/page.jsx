@@ -146,13 +146,26 @@ const Page = () => {
 
   const handleDelete = async (id) => {
     if (password === "UNID") {
+      // Eliminar el servicio social asociado antes de eliminar al estudiante
+      const { error: servicioSocialError } = await supabase
+        .from("servicio_social")
+        .delete()
+        .eq("estudiante_id", id);
+
+      if (servicioSocialError) {
+        console.error("Error deleting servicio social:", servicioSocialError.message);
+        alert("Error deleting servicio social: " + servicioSocialError.message);
+        return;
+      }
+
       const { error } = await supabase
         .from("estudiantes")
         .delete()
         .eq("id", id);
 
       if (error) {
-        alert("Error deleting student:", error.message);
+        console.error("Error deleting student:", error.message);
+        alert("Error deleting student: " + error.message);
       } else {
         setEstudiantes(
           estudiantes.filter((estudiante) => estudiante.id !== id)
@@ -182,7 +195,6 @@ const Page = () => {
       return;
     }
 
-    let empresaIdFinal = empresaId;
     if (empresaId === "otro" && nuevaEmpresa) {
       const { data, error } = await supabase
         .from("empresas")
@@ -192,12 +204,11 @@ const Page = () => {
         alert("Error adding new empresa:", error.message);
         return;
       }
-      empresaIdFinal = data[0].id;
+      setEmpresaId(data[0].id);
       setEmpresas([...empresas, data[0]]);
       setNuevaEmpresa("");
     }
 
-    let actividadIdFinal = actividadId;
     if (actividadId === "otro" && nuevaActividad) {
       const { data, error } = await supabase
         .from("actividades")
@@ -207,7 +218,7 @@ const Page = () => {
         alert("Error adding new actividad:", error.message);
         return;
       }
-      actividadIdFinal = data[0].id;
+      setActividadId(data[0].id);
       setActividades([...actividades, data[0]]);
       setNuevaActividad("");
     }
@@ -228,28 +239,8 @@ const Page = () => {
     } else {
       const newStudent = {
         ...data[0],
-        servicio_social: [
-          {
-            empresa_id: empresaIdFinal,
-            actividad_id: actividadIdFinal,
-            fecha_inicio: fechaInicio,
-            fecha_fin: fechaFin,
-            fecha_constancia: fechaConstancia,
-          },
-        ],
+        servicio_social: [],
       };
-
-      await supabase.from("servicio_social").insert([
-        {
-          estudiante_id: data[0].id,
-          empresa_id: empresaIdFinal,
-          actividad_id: actividadIdFinal,
-          fecha_inicio: fechaInicio,
-          fecha_fin: fechaFin,
-          fecha_constancia: fechaConstancia,
-        },
-      ]);
-
       setEstudiantes([...estudiantes, newStudent]);
       setFilteredEstudiantes([...filteredEstudiantes, newStudent]);
       setNombre("");
@@ -257,9 +248,6 @@ const Page = () => {
       setProgramaId("");
       setEmpresaId("");
       setActividadId("");
-      setFechaInicio("");
-      setFechaFin("");
-      setFechaConstancia("");
       setIsAddOpen(false); // Close the add dialog
     }
   };
@@ -267,7 +255,6 @@ const Page = () => {
   const handleEditStudent = async (event) => {
     event.preventDefault();
 
-    let empresaIdFinal = empresaId;
     if (empresaId === "otro" && nuevaEmpresa) {
       const { data, error } = await supabase
         .from("empresas")
@@ -277,12 +264,11 @@ const Page = () => {
         alert("Error adding new empresa:", error.message);
         return;
       }
-      empresaIdFinal = data[0].id;
+      setEmpresaId(data[0].id);
       setEmpresas([...empresas, data[0]]);
       setNuevaEmpresa("");
     }
 
-    let actividadIdFinal = actividadId;
     if (actividadId === "otro" && nuevaActividad) {
       const { data, error } = await supabase
         .from("actividades")
@@ -292,7 +278,7 @@ const Page = () => {
         alert("Error adding new actividad:", error.message);
         return;
       }
-      actividadIdFinal = data[0].id;
+      setActividadId(data[0].id);
       setActividades([...actividades, data[0]]);
       setNuevaActividad("");
     }
@@ -316,8 +302,8 @@ const Page = () => {
       } = await supabase
         .from("servicio_social")
         .update({
-          empresa_id: empresaIdFinal || null,
-          actividad_id: actividadIdFinal || null,
+          empresa_id: empresaId || null,
+          actividad_id: actividadId || null,
           fecha_inicio: fechaInicio || null,
           fecha_fin: fechaFin || null,
           fecha_constancia: fechaConstancia || null,
@@ -385,14 +371,12 @@ const Page = () => {
 
   if (loading) {
     return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100vh",
-        }}
-      >
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh'
+      }}>
         <RiseLoader color="#508fb3" loading={loading} />
       </div>
     );
@@ -700,7 +684,7 @@ const Page = () => {
                       <form
                         onSubmit={(e) => {
                           e.preventDefault();
-                          handleDelete(estudiante.id);
+                          handleDelete(selectedEstudiante.id);
                         }}
                       >
                         <div className="grid gap-4 py-4">
@@ -904,53 +888,6 @@ const Page = () => {
                   />
                 </div>
               )}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label
-                  htmlFor="fechaInicio"
-                  className="text-right"
-                >
-                  Fecha de Inicio
-                </Label>
-                <Input
-                  id="fechaInicio"
-                  type="date"
-                  value={fechaInicio}
-                  className="col-span-3"
-                  onChange={(e) => setFechaInicio(e.target.value)}
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label
-                  htmlFor="fechaFin"
-                  className="text-right"
-                >
-                  Fecha de Fin
-                </Label>
-                <Input
-                  id="fechaFin"
-                  type="date"
-                  value={fechaFin}
-                  className="col-span-3"
-                  onChange={(e) => setFechaFin(e.target.value)}
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label
-                  htmlFor="fechaConstancia"
-                  className="text-right"
-                >
-                  Fecha de Constancia
-                </Label>
-                <Input
-                  id="fechaConstancia"
-                  type="date"
-                  value={fechaConstancia}
-                  className="col-span-3"
-                  onChange={(e) =>
-                    setFechaConstancia(e.target.value)
-                  }
-                />
-              </div>
             </div>
             <DialogFooter>
               <Button type="submit">Guardar cambios</Button>
