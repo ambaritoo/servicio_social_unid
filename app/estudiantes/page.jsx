@@ -35,26 +35,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RiseLoader } from "react-spinners";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 const Page = () => {
   const [estudiantes, setEstudiantes] = useState([]);
   const [filteredEstudiantes, setFilteredEstudiantes] = useState([]);
   const [programas, setProgramas] = useState([]);
-  const [empresas, setEmpresas] = useState([]);
-  const [actividades, setActividades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedEstudiante, setSelectedEstudiante] = useState(null);
   const [nombre, setNombre] = useState("");
   const [numeroControl, setNumeroControl] = useState("");
   const [programaId, setProgramaId] = useState("");
-  const [empresaId, setEmpresaId] = useState("");
-  const [nuevaEmpresa, setNuevaEmpresa] = useState("");
-  const [actividadId, setActividadId] = useState("");
-  const [nuevaActividad, setNuevaActividad] = useState("");
-  const [fechaInicio, setFechaInicio] = useState("");
-  const [fechaFin, setFechaFin] = useState("");
-  const [fechaConstancia, setFechaConstancia] = useState("");
   const [password, setPassword] = useState("");
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -66,62 +59,27 @@ const Page = () => {
       const {
         data: estudiantesData,
         error: estudiantesError,
-      } = await supabase.from("estudiantes").select(`
-          *,
-          servicio_social (
-            empresa_id,
-            actividad_id,
-            fecha_inicio,
-            fecha_fin,
-            fecha_constancia,
-            empresas ( nombre ),
-            actividades ( descripcion )
-          )
-        `);
+      } = await supabase.from("estudiantes").select("*");
 
       const {
         data: programasData,
         error: programasError,
       } = await supabase.from("programas_estudio").select("*");
 
-      const { data: empresasData, error: empresasError } = await supabase
-        .from("empresas")
-        .select("*");
-
-      const {
-        data: actividadesData,
-        error: actividadesError,
-      } = await supabase.from("actividades").select("*");
-
-      if (
-        estudiantesError ||
-        programasError ||
-        empresasError ||
-        actividadesError
-      ) {
+      if (estudiantesError || programasError) {
         console.error(
           "Error fetching data:",
-          estudiantesError ||
-            programasError ||
-            empresasError ||
-            actividadesError
+          estudiantesError || programasError
         );
         setError(
-          estudiantesError?.message ||
-            programasError?.message ||
-            empresasError?.message ||
-            actividadesError?.message
+          estudiantesError?.message || programasError?.message
         );
       } else {
         console.log("Estudiantes:", estudiantesData);
         console.log("Programas:", programasData);
-        console.log("Empresas:", empresasData);
-        console.log("Actividades:", actividadesData);
         setEstudiantes(estudiantesData);
         setFilteredEstudiantes(estudiantesData);
         setProgramas(programasData);
-        setEmpresas(empresasData);
-        setActividades(actividadesData);
       }
       setLoading(false);
     };
@@ -134,31 +92,8 @@ const Page = () => {
     return programa ? programa.nombre : "";
   };
 
-  const getEmpresaNombre = (empresaId) => {
-    const empresa = empresas.find((e) => e.id === empresaId);
-    return empresa ? empresa.nombre : "";
-  };
-
-  const getActividadDescripcion = (actividadId) => {
-    const actividad = actividades.find((a) => a.id === actividadId);
-    return actividad ? actividad.descripcion : "";
-  };
-
   const handleDelete = async (id) => {
     if (password === "UNID") {
-      // Primero elimina los registros relacionados en servicio_social
-      const { error: servicioError } = await supabase
-        .from("servicio_social")
-        .delete()
-        .eq("estudiante_id", id);
-
-      if (servicioError) {
-        console.error("Error deleting related service social records:", servicioError.message);
-        alert("Error deleting related service social records: " + servicioError.message);
-        return;
-      }
-
-      // Luego elimina el estudiante
       const { error } = await supabase
         .from("estudiantes")
         .delete()
@@ -175,7 +110,7 @@ const Page = () => {
           filteredEstudiantes.filter((estudiante) => estudiante.id !== id)
         );
         setPassword("");
-        setIsDeleteOpen(false); // Close the delete dialog
+        setIsDeleteOpen(false);
       }
     } else {
       alert("Incorrect password!");
@@ -185,7 +120,6 @@ const Page = () => {
   const handleAddStudent = async (event) => {
     event.preventDefault();
 
-    // Verificar si el número de control ya existe
     const { data: existingStudent, error: existingError } = await supabase
       .from("estudiantes")
       .select("*")
@@ -194,34 +128,6 @@ const Page = () => {
     if (existingStudent && existingStudent.length > 0) {
       alert("El número de control ya existe. No se puede duplicar.");
       return;
-    }
-
-    if (empresaId === "otro" && nuevaEmpresa) {
-      const { data, error } = await supabase
-        .from("empresas")
-        .insert([{ nombre: nuevaEmpresa }])
-        .select();
-      if (error) {
-        alert("Error adding new empresa:", error.message);
-        return;
-      }
-      setEmpresaId(data[0].id);
-      setEmpresas([...empresas, data[0]]);
-      setNuevaEmpresa("");
-    }
-
-    if (actividadId === "otro" && nuevaActividad) {
-      const { data, error } = await supabase
-        .from("actividades")
-        .insert([{ descripcion: nuevaActividad }])
-        .select();
-      if (error) {
-        alert("Error adding new actividad:", error.message);
-        return;
-      }
-      setActividadId(data[0].id);
-      setActividades([...actividades, data[0]]);
-      setNuevaActividad("");
     }
 
     const { data, error } = await supabase
@@ -240,73 +146,18 @@ const Page = () => {
     } else {
       const newStudent = {
         ...data[0],
-        servicio_social: [],
       };
-
-      // Insertar servicio social
-      const { data: servicioData, error: servicioError } = await supabase
-        .from("servicio_social")
-        .insert([
-          {
-            estudiante_id: newStudent.id,
-            empresa_id: empresaId,
-            actividad_id: actividadId,
-            fecha_inicio: fechaInicio,
-            fecha_fin: fechaFin,
-            fecha_constancia: fechaConstancia,
-          },
-        ])
-        .select();
-
-      if (servicioError) {
-        alert("Error adding service social:", servicioError.message);
-      } else {
-        newStudent.servicio_social = [servicioData[0]];
-        setEstudiantes([...estudiantes, newStudent]);
-        setFilteredEstudiantes([...filteredEstudiantes, newStudent]);
-        setNombre("");
-        setNumeroControl("");
-        setProgramaId("");
-        setEmpresaId("");
-        setActividadId("");
-        setFechaInicio("");
-        setFechaFin("");
-        setFechaConstancia("");
-        setIsAddOpen(false); // Close the add dialog
-      }
+      setEstudiantes([...estudiantes, newStudent]);
+      setFilteredEstudiantes([...filteredEstudiantes, newStudent]);
+      setNombre("");
+      setNumeroControl("");
+      setProgramaId("");
+      setIsAddOpen(false);
     }
   };
 
   const handleEditStudent = async (event) => {
     event.preventDefault();
-
-    if (empresaId === "otro" && nuevaEmpresa) {
-      const { data, error } = await supabase
-        .from("empresas")
-        .insert([{ nombre: nuevaEmpresa }])
-        .select();
-      if (error) {
-        alert("Error adding new empresa:", error.message);
-        return;
-      }
-      setEmpresaId(data[0].id);
-      setEmpresas([...empresas, data[0]]);
-      setNuevaEmpresa("");
-    }
-
-    if (actividadId === "otro" && nuevaActividad) {
-      const { data, error } = await supabase
-        .from("actividades")
-        .insert([{ descripcion: nuevaActividad }])
-        .select();
-      if (error) {
-        alert("Error adding new actividad:", error.message);
-        return;
-      }
-      setActividadId(data[0].id);
-      setActividades([...actividades, data[0]]);
-      setNuevaActividad("");
-    }
 
     const { data: updatedEstudiante, error: estudianteError } = await supabase
       .from("estudiantes")
@@ -321,55 +172,29 @@ const Page = () => {
     if (estudianteError) {
       alert("Error updating student:", estudianteError.message);
     } else {
-      const {
-        data: updatedServicioSocial,
-        error: servicioSocialError,
-      } = await supabase
-        .from("servicio_social")
-        .update({
-          empresa_id: empresaId || null,
-          actividad_id: actividadId || null,
-          fecha_inicio: fechaInicio || null,
-          fecha_fin: fechaFin || null,
-          fecha_constancia: fechaConstancia || null,
-        })
-        .eq("estudiante_id", selectedEstudiante.id)
-        .select();
-
-      if (servicioSocialError) {
-        alert("Error updating service social:", servicioSocialError.message);
-      } else {
-        const updatedData = {
-          ...updatedEstudiante[0],
-          servicio_social: [updatedServicioSocial[0]],
-        };
-        setEstudiantes(
-          estudiantes.map((est) =>
-            est.id === selectedEstudiante.id ? updatedData : est
-          )
-        );
-        setFilteredEstudiantes(
-          filteredEstudiantes.map((est) =>
-            est.id === selectedEstudiante.id ? updatedData : est
-          )
-        );
-        setSelectedEstudiante(null);
-        setIsEditOpen(false); // Close the edit dialog
-      }
+      const updatedData = {
+        ...updatedEstudiante[0],
+      };
+      setEstudiantes(
+        estudiantes.map((est) =>
+          est.id === selectedEstudiante.id ? updatedData : est
+        )
+      );
+      setFilteredEstudiantes(
+        filteredEstudiantes.map((est) =>
+          est.id === selectedEstudiante.id ? updatedData : est
+        )
+      );
+      setSelectedEstudiante(null);
+      setIsEditOpen(false);
     }
   };
 
   const openEditDialog = (estudiante) => {
-    const servicioSocial = estudiante.servicio_social?.[0] || {};
     setSelectedEstudiante(estudiante);
     setNombre(estudiante.nombre);
     setNumeroControl(estudiante.numero_control);
     setProgramaId(estudiante.programa_id);
-    setEmpresaId(servicioSocial.empresa_id || "");
-    setActividadId(servicioSocial.actividad_id || "");
-    setFechaInicio(servicioSocial.fecha_inicio || "");
-    setFechaFin(servicioSocial.fecha_fin || "");
-    setFechaConstancia(servicioSocial.fecha_constancia || "");
     setIsEditOpen(true);
   };
 
@@ -378,20 +203,27 @@ const Page = () => {
       const programaNombre = getProgramaNombre(
         estudiante.programa_id
       ).toLowerCase();
-      const empresaNombre =
-        estudiante.servicio_social?.[0]?.empresas?.nombre?.toLowerCase() || "";
-      const actividadDescripcion =
-        estudiante.servicio_social?.[0]?.actividades?.descripcion?.toLowerCase() ||
-        "";
       return (
         estudiante.nombre.toLowerCase().includes(term.toLowerCase()) ||
         estudiante.numero_control.includes(term) ||
-        programaNombre.includes(term.toLowerCase()) ||
-        empresaNombre.includes(term.toLowerCase()) ||
-        actividadDescripcion.includes(term.toLowerCase())
+        programaNombre.includes(term.toLowerCase())
       );
     });
     setFilteredEstudiantes(filtered);
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    doc.autoTable({
+      head: [['Número', 'Número de Control', 'Nombre', 'Programa']],
+      body: filteredEstudiantes.map(estudiante => [
+        estudiante.id,
+        estudiante.numero_control,
+        estudiante.nombre,
+        getProgramaNombre(estudiante.programa_id)
+      ]),
+    });
+    doc.save('estudiantes.pdf');
   };
 
   if (loading) {
@@ -413,7 +245,7 @@ const Page = () => {
       <div>Estudiantes</div>
       <div className="mb-4">
         <Input
-          placeholder="Buscar por Nombre, Número de Control, Programa, Empresa, Actividad, etc."
+          placeholder="Buscar por Nombre, Número de Control, Programa, etc."
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
@@ -421,6 +253,7 @@ const Page = () => {
           }}
         />
       </div>
+      <Button onClick={exportToPDF}>Exportar a PDF</Button>
       <Table>
         <TableCaption>Lista de Estudiantes</TableCaption>
         <TableHeader>
@@ -429,320 +262,156 @@ const Page = () => {
             <TableHead>Número de Control</TableHead>
             <TableHead>Nombre</TableHead>
             <TableHead>Programa</TableHead>
-            <TableHead>Empresa</TableHead>
-            <TableHead>Actividad</TableHead>
-            <TableHead>Fecha de Inicio</TableHead>
-            <TableHead>Fecha de Fin</TableHead>
-            <TableHead>Fecha de Constancia</TableHead>
             <TableHead>Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredEstudiantes.map((estudiante) => {
-            const servicioSocial = estudiante.servicio_social?.[0] || {};
-            return (
-              <TableRow key={estudiante.id}>
-                <TableCell className="font-medium">{estudiante.id}</TableCell>
-                <TableCell>{estudiante.numero_control}</TableCell>
-                <TableCell>{estudiante.nombre}</TableCell>
-                <TableCell>
-                  {getProgramaNombre(estudiante.programa_id)}
-                </TableCell>
-                <TableCell>
-                  {getEmpresaNombre(servicioSocial.empresa_id)}
-                </TableCell>
-                <TableCell>
-                  {getActividadDescripcion(servicioSocial.actividad_id)}
-                </TableCell>
-                <TableCell>{servicioSocial.fecha_inicio}</TableCell>
-                <TableCell>{servicioSocial.fecha_fin}</TableCell>
-                <TableCell>{servicioSocial.fecha_constancia}</TableCell>
-                <TableCell>
-                  <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        onClick={() => openEditDialog(estudiante)}
-                      >
-                        Editar
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                      <DialogHeader>
-                        <DialogTitle>Editar Estudiante</DialogTitle>
-                        <DialogDescription>
-                          Realiza cambios en la información del estudiante. Haz
-                          clic en guardar cuando termines.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <form onSubmit={handleEditStudent}>
-                        <div className="grid gap-4 py-4">
-                          <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="edit-name" className="text-right">
-                              Nombre
-                            </Label>
-                            <Input
-                              id="edit-name"
-                              value={nombre}
-                              className="col-span-3"
-                              onChange={(e) => setNombre(e.target.value)}
-                            />
-                          </div>
-                          <div className="grid grid-cols-4 items-center gap-4">
-                            <Label
-                              htmlFor="edit-numeroControl"
-                              className="text-right"
-                            >
-                              Número de Control
-                            </Label>
-                            <Input
-                              id="edit-numeroControl"
-                              value={numeroControl}
-                              className="col-span-3"
-                              onChange={(e) => setNumeroControl(e.target.value)}
-                            />
-                          </div>
-                          <div className="grid grid-cols-4 items-center gap-4">
-                            <Label
-                              htmlFor="edit-programaId"
-                              className="text-right"
-                            >
-                              Programa
-                            </Label>
-                            <Select
-                              value={programaId.toString()}
-                              onValueChange={(value) =>
-                                setProgramaId(parseInt(value))
-                              }
-                            >
-                              <SelectTrigger className="col-span-3">
-                                <SelectValue>
-                                  {getProgramaNombre(programaId) ||
-                                    "Selecciona un programa"}
-                                </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectGroup>
-                                  <SelectLabel>Programas</SelectLabel>
-                                  {programas.map((programa) => (
-                                    <SelectItem
-                                      key={programa.id}
-                                      value={programa.id.toString()}
-                                    >
-                                      {programa.nombre}
-                                    </SelectItem>
-                                  ))}
-                                </SelectGroup>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="grid grid-cols-4 items-center gap-4">
-                            <Label
-                              htmlFor="edit-empresaId"
-                              className="text-right"
-                            >
-                              Empresa
-                            </Label>
-                            <Select
-                              value={empresaId.toString()}
-                              onValueChange={(value) => setEmpresaId(value)}
-                            >
-                              <SelectTrigger className="col-span-3">
-                                <SelectValue>
-                                  {getEmpresaNombre(empresaId) ||
-                                    "Selecciona una empresa"}
-                                </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectGroup>
-                                  <SelectLabel>Empresas</SelectLabel>
-                                  {empresas.map((empresa) => (
-                                    <SelectItem
-                                      key={empresa.id}
-                                      value={empresa.id.toString()}
-                                    >
-                                      {empresa.nombre}
-                                    </SelectItem>
-                                  ))}
-                                  <SelectItem value="otro">Otro</SelectItem>
-                                </SelectGroup>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          {empresaId === "otro" && (
-                            <div className="grid grid-cols-4 items-center gap-4">
-                              <Label
-                                htmlFor="nueva-empresa"
-                                className="text-right"
-                              >
-                                Nueva Empresa
-                              </Label>
-                              <Input
-                                id="nueva-empresa"
-                                value={nuevaEmpresa}
-                                className="col-span-3"
-                                onChange={(e) => setNuevaEmpresa(e.target.value)}
-                              />
-                            </div>
-                          )}
-                          <div className="grid grid-cols-4 items-center gap-4">
-                            <Label
-                              htmlFor="edit-actividadId"
-                              className="text-right"
-                            >
-                              Actividad
-                            </Label>
-                            <Select
-                              value={actividadId.toString()}
-                              onValueChange={(value) => setActividadId(value)}
-                            >
-                              <SelectTrigger className="col-span-3">
-                                <SelectValue>
-                                  {getActividadDescripcion(actividadId) ||
-                                    "Selecciona una actividad"}
-                                </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectGroup>
-                                  <SelectLabel>Actividades</SelectLabel>
-                                  {actividades.map((actividad) => (
-                                    <SelectItem
-                                      key={actividad.id}
-                                      value={actividad.id.toString()}
-                                    >
-                                      {actividad.descripcion}
-                                    </SelectItem>
-                                  ))}
-                                  <SelectItem value="otro">Otro</SelectItem>
-                                </SelectGroup>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          {actividadId === "otro" && (
-                            <div className="grid grid-cols-4 items-center gap-4">
-                              <Label
-                                htmlFor="nueva-actividad"
-                                className="text-right"
-                              >
-                                Nueva Actividad
-                              </Label>
-                              <Input
-                                id="nueva-actividad"
-                                value={nuevaActividad}
-                                className="col-span-3"
-                                onChange={(e) =>
-                                  setNuevaActividad(e.target.value)
-                                }
-                              />
-                            </div>
-                          )}
-                          <div className="grid grid-cols-4 items-center gap-4">
-                            <Label
-                              htmlFor="edit-fechaInicio"
-                              className="text-right"
-                            >
-                              Fecha de Inicio
-                            </Label>
-                            <Input
-                              id="edit-fechaInicio"
-                              type="date"
-                              value={fechaInicio}
-                              className="col-span-3"
-                              onChange={(e) => setFechaInicio(e.target.value)}
-                            />
-                          </div>
-                          <div className="grid grid-cols-4 items-center gap-4">
-                            <Label
-                              htmlFor="edit-fechaFin"
-                              className="text-right"
-                            >
-                              Fecha de Fin
-                            </Label>
-                            <Input
-                              id="edit-fechaFin"
-                              type="date"
-                              value={fechaFin}
-                              className="col-span-3"
-                              onChange={(e) => setFechaFin(e.target.value)}
-                            />
-                          </div>
-                          <div className="grid grid-cols-4 items-center gap-4">
-                            <Label
-                              htmlFor="edit-fechaConstancia"
-                              className="text-right"
-                            >
-                              Fecha de Constancia
-                            </Label>
-                            <Input
-                              id="edit-fechaConstancia"
-                              type="date"
-                              value={fechaConstancia}
-                              className="col-span-3"
-                              onChange={(e) =>
-                                setFechaConstancia(e.target.value)
-                              }
-                            />
-                          </div>
+          {filteredEstudiantes.map((estudiante) => (
+            <TableRow key={estudiante.id}>
+              <TableCell className="font-medium">{estudiante.id}</TableCell>
+              <TableCell>{estudiante.numero_control}</TableCell>
+              <TableCell>{estudiante.nombre}</TableCell>
+              <TableCell>
+                {getProgramaNombre(estudiante.programa_id)}
+              </TableCell>
+              <TableCell>
+                <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      onClick={() => openEditDialog(estudiante)}
+                    >
+                      Editar
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Editar Estudiante</DialogTitle>
+                      <DialogDescription>
+                        Realiza cambios en la información del estudiante. Haz
+                        clic en guardar cuando termines.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleEditStudent}>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="edit-name" className="text-right">
+                            Nombre
+                          </Label>
+                          <Input
+                            id="edit-name"
+                            value={nombre}
+                            className="col-span-3"
+                            onChange={(e) => setNombre(e.target.value)}
+                          />
                         </div>
-                        <DialogFooter>
-                          <Button type="submit">Guardar cambios</Button>
-                        </DialogFooter>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-                  <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        onClick={() => setIsDeleteOpen(true)}
-                      >
-                        Eliminar
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                      <DialogHeader>
-                        <DialogTitle>Eliminar Estudiante</DialogTitle>
-                        <DialogDescription>
-                          Ingresa la contraseña para eliminar este estudiante.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <form
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          handleDelete(estudiante.id);
-                        }}
-                      >
-                        <div className="grid gap-4 py-4">
-                          <div className="grid grid-cols-4 items-center gap-4">
-                            <Label
-                              htmlFor="delete-password"
-                              className="text-right"
-                            >
-                              Contraseña
-                            </Label>
-                            <Input
-                              id="delete-password"
-                              type="password"
-                              value={password}
-                              className="col-span-3"
-                              onChange={(e) => setPassword(e.target.value)}
-                            />
-                          </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label
+                            htmlFor="edit-numeroControl"
+                            className="text-right"
+                          >
+                            Número de Control
+                          </Label>
+                          <Input
+                            id="edit-numeroControl"
+                            value={numeroControl}
+                            className="col-span-3"
+                            onChange={(e) => setNumeroControl(e.target.value)}
+                          />
                         </div>
-                        <DialogFooter>
-                          <Button type="submit">Eliminar</Button>
-                        </DialogFooter>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-                </TableCell>
-              </TableRow>
-            );
-          })}
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label
+                            htmlFor="edit-programaId"
+                            className="text-right"
+                          >
+                            Programa
+                          </Label>
+                          <Select
+                            value={programaId.toString()}
+                            onValueChange={(value) =>
+                              setProgramaId(parseInt(value))
+                            }
+                          >
+                            <SelectTrigger className="col-span-3">
+                              <SelectValue>
+                                {getProgramaNombre(programaId) ||
+                                  "Selecciona un programa"}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                <SelectLabel>Programas</SelectLabel>
+                                {programas.map((programa) => (
+                                  <SelectItem
+                                    key={programa.id}
+                                    value={programa.id.toString()}
+                                  >
+                                    {programa.nombre}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button type="submit">Guardar cambios</Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+                <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsDeleteOpen(true)}
+                    >
+                      Eliminar
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Eliminar Estudiante</DialogTitle>
+                      <DialogDescription>
+                        Ingresa la contraseña para eliminar este estudiante.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        handleDelete(estudiante.id);
+                      }}
+                    >
+                      <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label
+                            htmlFor="delete-password"
+                            className="text-right"
+                          >
+                            Contraseña
+                          </Label>
+                          <Input
+                            id="delete-password"
+                            type="password"
+                            value={password}
+                            className="col-span-3"
+                            onChange={(e) => setPassword(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button type="submit">Eliminar</Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </TableCell>
+            </TableRow>
+          ))}
         </TableBody>
         <TableFooter>
           <TableRow>
-            <TableCell colSpan={10}>
+            <TableCell colSpan={5}>
               Total de Estudiantes: {estudiantes.length}
             </TableCell>
           </TableRow>
@@ -817,146 +486,6 @@ const Page = () => {
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="empresaId" className="text-right">
-                  Empresa
-                </Label>
-                <Select
-                  value={empresaId.toString()}
-                  onValueChange={(value) => setEmpresaId(value)}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue>
-                      {getEmpresaNombre(empresaId) ||
-                        "Selecciona una empresa"}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectLabel>Empresas</SelectLabel>
-                      {empresas.map((empresa) => (
-                        <SelectItem
-                          key={empresa.id}
-                          value={empresa.id.toString()}
-                        >
-                          {empresa.nombre}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="otro">Otro</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-              {empresaId === "otro" && (
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label
-                    htmlFor="nueva-empresa"
-                    className="text-right"
-                  >
-                    Nueva Empresa
-                  </Label>
-                  <Input
-                    id="nueva-empresa"
-                    value={nuevaEmpresa}
-                    className="col-span-3"
-                    onChange={(e) => setNuevaEmpresa(e.target.value)}
-                  />
-                </div>
-              )}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label
-                  htmlFor="actividadId"
-                  className="text-right"
-                >
-                  Actividad
-                </Label>
-                <Select
-                  value={actividadId.toString()}
-                  onValueChange={(value) => setActividadId(value)}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue>
-                      {getActividadDescripcion(actividadId) ||
-                        "Selecciona una actividad"}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectLabel>Actividades</SelectLabel>
-                      {actividades.map((actividad) => (
-                        <SelectItem
-                          key={actividad.id}
-                          value={actividad.id.toString()}
-                        >
-                          {actividad.descripcion}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="otro">Otro</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-              {actividadId === "otro" && (
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label
-                    htmlFor="nueva-actividad"
-                    className="text-right"
-                  >
-                    Nueva Actividad
-                  </Label>
-                  <Input
-                    id="nueva-actividad"
-                    value={nuevaActividad}
-                    className="col-span-3"
-                    onChange={(e) => setNuevaActividad(e.target.value)}
-                  />
-                </div>
-              )}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label
-                  htmlFor="fechaInicio"
-                  className="text-right"
-                >
-                  Fecha de Inicio
-                </Label>
-                <Input
-                  id="fechaInicio"
-                  type="date"
-                  value={fechaInicio}
-                  className="col-span-3"
-                  onChange={(e) => setFechaInicio(e.target.value)}
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label
-                  htmlFor="fechaFin"
-                  className="text-right"
-                >
-                  Fecha de Fin
-                </Label>
-                <Input
-                  id="fechaFin"
-                  type="date"
-                  value={fechaFin}
-                  className="col-span-3"
-                  onChange={(e) => setFechaFin(e.target.value)}
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label
-                  htmlFor="fechaConstancia"
-                  className="text-right"
-                >
-                  Fecha de Constancia
-                </Label>
-                <Input
-                  id="fechaConstancia"
-                  type="date"
-                  value={fechaConstancia}
-                  className="col-span-3"
-                  onChange={(e) => setFechaConstancia(e.target.value)}
-                />
               </div>
             </div>
             <DialogFooter>
