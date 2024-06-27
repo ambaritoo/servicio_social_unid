@@ -62,6 +62,8 @@ const Page = () => {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortColumn, setSortColumn] = useState("");
+  const [sortOrder, setSortOrder] = useState("asc");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -391,7 +393,76 @@ const Page = () => {
         actividadDescripcion.includes(term.toLowerCase())
       );
     });
-    setFilteredEstudiantes(filtered);
+
+    setFilteredEstudiantes(sortData(filtered, sortColumn, sortOrder));
+  };
+
+  const sortData = (data, column, order) => {
+    if (!column) return data;
+
+    const sorted = [...data].sort((a, b) => {
+      let aValue, bValue;
+
+      switch (column) {
+        case "id":
+          aValue = a.id;
+          bValue = b.id;
+          break;
+        case "nombre":
+          aValue = a.nombre.toLowerCase();
+          bValue = b.nombre.toLowerCase();
+          break;
+        case "numero_control":
+          aValue = a.numero_control;
+          bValue = b.numero_control;
+          break;
+        case "programa":
+          aValue = getProgramaNombre(a.programa_id).toLowerCase();
+          bValue = getProgramaNombre(b.programa_id).toLowerCase();
+          break;
+        case "empresa":
+          aValue =
+            a.servicio_social?.[0]?.empresas?.nombre?.toLowerCase() || "";
+          bValue =
+            b.servicio_social?.[0]?.empresas?.nombre?.toLowerCase() || "";
+          break;
+        case "actividad":
+          aValue =
+            a.servicio_social?.[0]?.actividades?.descripcion?.toLowerCase() ||
+            "";
+          bValue =
+            b.servicio_social?.[0]?.actividades?.descripcion?.toLowerCase() ||
+            "";
+          break;
+        case "fecha_inicio":
+          aValue = a.servicio_social?.[0]?.fecha_inicio || "";
+          bValue = b.servicio_social?.[0]?.fecha_inicio || "";
+          break;
+        case "fecha_fin":
+          aValue = a.servicio_social?.[0]?.fecha_fin || "";
+          bValue = b.servicio_social?.[0]?.fecha_fin || "";
+          break;
+        case "fecha_constancia":
+          aValue = a.servicio_social?.[0]?.fecha_constancia || "";
+          bValue = b.servicio_social?.[0]?.fecha_constancia || "";
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return order === "asc" ? -1 : 1;
+      if (aValue > bValue) return order === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return sorted;
+  };
+
+  const handleSort = (column) => {
+    const newOrder = sortOrder === "asc" ? "desc" : "asc";
+    setSortColumn(column);
+    setSortOrder(newOrder);
+    setFilteredEstudiantes(sortData(filteredEstudiantes, column, newOrder));
   };
 
   const exportToPDF = () => {
@@ -462,15 +533,15 @@ const Page = () => {
         <TableCaption>Lista de Estudiantes</TableCaption>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[100px]">Número</TableHead>
-            <TableHead>Número de Control</TableHead>
-            <TableHead>Nombre</TableHead>
-            <TableHead>Programa</TableHead>
-            <TableHead>Empresa</TableHead>
-            <TableHead>Actividad</TableHead>
-            <TableHead>Fecha de Inicio</TableHead>
-            <TableHead>Fecha de Fin</TableHead>
-            <TableHead>Fecha de Constancia</TableHead>
+            <TableHead className="w-[100px]" onClick={() => handleSort("id")}>Número</TableHead>
+            <TableHead onClick={() => handleSort("numero_control")}>Número de Control</TableHead>
+            <TableHead onClick={() => handleSort("nombre")}>Nombre</TableHead>
+            <TableHead onClick={() => handleSort("programa")}>Programa</TableHead>
+            <TableHead onClick={() => handleSort("empresa")}>Empresa</TableHead>
+            <TableHead onClick={() => handleSort("actividad")}>Actividad</TableHead>
+            <TableHead onClick={() => handleSort("fecha_inicio")}>Fecha de Inicio</TableHead>
+            <TableHead onClick={() => handleSort("fecha_fin")}>Fecha de Fin</TableHead>
+            <TableHead onClick={() => handleSort("fecha_constancia")}>Fecha de Constancia</TableHead>
             <TableHead>Acciones</TableHead>
           </TableRow>
         </TableHeader>
