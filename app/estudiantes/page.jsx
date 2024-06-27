@@ -206,7 +206,7 @@ const Page = () => {
         alert("Error adding new empresa:", error.message);
         return;
       }
-      setEmpresaId(data[0].id);
+      setEmpresaId(data[0].id.toString());
       setEmpresas([...empresas, data[0]]);
       setNuevaEmpresa("");
     }
@@ -220,7 +220,7 @@ const Page = () => {
         alert("Error adding new actividad:", error.message);
         return;
       }
-      setActividadId(data[0].id);
+      setActividadId(data[0].id.toString());
       setActividades([...actividades, data[0]]);
       setNuevaActividad("");
     }
@@ -289,7 +289,7 @@ const Page = () => {
         alert("Error adding new empresa:", error.message);
         return;
       }
-      setEmpresaId(data[0].id);
+      setEmpresaId(data[0].id.toString());
       setEmpresas([...empresas, data[0]]);
       setNuevaEmpresa("");
     }
@@ -303,7 +303,7 @@ const Page = () => {
         alert("Error adding new actividad:", error.message);
         return;
       }
-      setActividadId(data[0].id);
+      setActividadId(data[0].id.toString());
       setActividades([...actividades, data[0]]);
       setNuevaActividad("");
     }
@@ -364,9 +364,9 @@ const Page = () => {
     setSelectedEstudiante(estudiante);
     setNombre(estudiante.nombre);
     setNumeroControl(estudiante.numero_control);
-    setProgramaId(estudiante.programa_id);
-    setEmpresaId(servicioSocial.empresa_id || "");
-    setActividadId(servicioSocial.actividad_id || "");
+    setProgramaId(estudiante.programa_id.toString());
+    setEmpresaId(servicioSocial.empresa_id ? servicioSocial.empresa_id.toString() : "");
+    setActividadId(servicioSocial.actividad_id ? servicioSocial.actividad_id.toString() : "");
     setFechaInicio(servicioSocial.fecha_inicio || "");
     setFechaFin(servicioSocial.fecha_fin || "");
     setFechaConstancia(servicioSocial.fecha_constancia || "");
@@ -547,16 +547,13 @@ const Page = () => {
                               Programa
                             </Label>
                             <Select
-                              value={programaId.toString()}
+                              value={programaId}
                               onValueChange={(value) =>
-                                setProgramaId(parseInt(value))
+                                setProgramaId(value)
                               }
                             >
                               <SelectTrigger className="col-span-3">
-                                <SelectValue>
-                                  {getProgramaNombre(programaId) ||
-                                    "Selecciona un programa"}
-                                </SelectValue>
+                                <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectGroup>
@@ -581,14 +578,11 @@ const Page = () => {
                               Empresa
                             </Label>
                             <Select
-                              value={empresaId.toString()}
+                              value={empresaId}
                               onValueChange={(value) => setEmpresaId(value)}
                             >
                               <SelectTrigger className="col-span-3">
-                                <SelectValue>
-                                  {getEmpresaNombre(empresaId) ||
-                                    "Selecciona una empresa"}
-                                </SelectValue>
+                                <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectGroup>
@@ -632,14 +626,11 @@ const Page = () => {
                               Actividad
                             </Label>
                             <Select
-                              value={actividadId.toString()}
+                              value={actividadId}
                               onValueChange={(value) => setActividadId(value)}
                             >
                               <SelectTrigger className="col-span-3">
-                                <SelectValue>
-                                  {getActividadDescripcion(actividadId) ||
-                                    "Selecciona una actividad"}
-                                </SelectValue>
+                                <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectGroup>
@@ -831,14 +822,11 @@ const Page = () => {
                   Programa
                 </Label>
                 <Select
-                  value={programaId.toString()}
-                  onValueChange={(value) => setProgramaId(parseInt(value))}
+                  value={programaId}
+                  onValueChange={(value) => setProgramaId(value)}
                 >
                   <SelectTrigger className="col-span-3">
-                    <SelectValue>
-                      {getProgramaNombre(programaId) ||
-                        "Selecciona un programa"}
-                    </SelectValue>
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
@@ -860,13 +848,11 @@ const Page = () => {
                   Empresa
                 </Label>
                 <Select
-                  value={empresaId.toString()}
+                  value={empresaId}
                   onValueChange={(value) => setEmpresaId(value)}
                 >
                   <SelectTrigger className="col-span-3">
-                    <SelectValue>
-                      {getEmpresaNombre(empresaId) || "Selecciona una empresa"}
-                    </SelectValue>
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
@@ -902,14 +888,11 @@ const Page = () => {
                   Actividad
                 </Label>
                 <Select
-                  value={actividadId.toString()}
+                  value={actividadId}
                   onValueChange={(value) => setActividadId(value)}
                 >
                   <SelectTrigger className="col-span-3">
-                    <SelectValue>
-                      {getActividadDescripcion(actividadId) ||
-                        "Selecciona una actividad"}
-                    </SelectValue>
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
