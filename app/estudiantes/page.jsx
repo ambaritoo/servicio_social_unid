@@ -195,6 +195,8 @@ const Page = () => {
       return;
     }
 
+  
+
     if (empresaId === "otro" && nuevaEmpresa) {
       const { data, error } = await supabase
         .from("empresas")
@@ -209,6 +211,8 @@ const Page = () => {
       setNuevaEmpresa("");
     }
 
+
+    
     if (actividadId === "otro" && nuevaActividad) {
       const { data, error } = await supabase
         .from("actividades")
@@ -241,6 +245,9 @@ const Page = () => {
         ...data[0],
         servicio_social: [],
       };
+
+
+
       setEstudiantes([...estudiantes, newStudent]);
       setFilteredEstudiantes([...filteredEstudiantes, newStudent]);
       setNombre("");
@@ -248,12 +255,14 @@ const Page = () => {
       setProgramaId("");
       setEmpresaId("");
       setActividadId("");
+
       setIsAddOpen(false); // Close the add dialog
     }
   };
 
   const handleEditStudent = async (event) => {
     event.preventDefault();
+
 
     if (empresaId === "otro" && nuevaEmpresa) {
       const { data, error } = await supabase
@@ -268,6 +277,7 @@ const Page = () => {
       setEmpresas([...empresas, data[0]]);
       setNuevaEmpresa("");
     }
+
 
     if (actividadId === "otro" && nuevaActividad) {
       const { data, error } = await supabase
@@ -888,6 +898,7 @@ const Page = () => {
                   />
                 </div>
               )}
+
             </div>
             <DialogFooter>
               <Button type="submit">Guardar cambios</Button>
