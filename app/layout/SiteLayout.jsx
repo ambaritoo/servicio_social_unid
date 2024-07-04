@@ -1,6 +1,6 @@
 import React from 'react';
 import Navbar from '@/components/Navbar/Navbar';
-import Footer from '@/components/Footer/Footer';
+
 
 const SiteLayout = ({ children }) => {
   return (
@@ -12,7 +12,7 @@ const SiteLayout = ({ children }) => {
         </div>
         
       </main>
-      <Footer />
+      
     </div>
   );
 };
