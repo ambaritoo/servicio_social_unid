@@ -731,9 +731,7 @@ const Page = () => {
                                 id="nueva-actividad"
                                 value={nuevaActividad}
                                 className="col-span-3"
-                                onChange={(e) =>
-                                  setNuevaActividad(e.target.value)
-                                }
+                                onChange={(e) => setNuevaActividad(e.target.value)}
                               />
                             </div>
                           )}
