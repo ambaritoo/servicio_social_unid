@@ -12,7 +12,6 @@ const SiteLayout = ({ children }) => {
         </div>
         
       </main>
-      <Footer />
     </div>
   );
 };
