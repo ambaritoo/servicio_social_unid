@@ -43,7 +43,6 @@ const Page = () => {
   const [filteredEstudiantes, setFilteredEstudiantes] = useState([]);
   const [programas, setProgramas] = useState([]);
   const [empresas, setEmpresas] = useState([]);
-  const [actividades, setActividades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedEstudiante, setSelectedEstudiante] = useState(null);
@@ -52,7 +51,7 @@ const Page = () => {
   const [programaId, setProgramaId] = useState("");
   const [empresaId, setEmpresaId] = useState("");
   const [nuevaEmpresa, setNuevaEmpresa] = useState("");
-  const [actividadId, setActividadId] = useState("");
+  const [actividadDescripcion, setActividadDescripcion] = useState("");
   const [nuevaActividad, setNuevaActividad] = useState("");
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin, setFechaFin] = useState("");
@@ -74,12 +73,11 @@ const Page = () => {
           *,
           servicio_social (
             empresa_id,
-            actividad_id,
+            actividad_descripcion,
             fecha_inicio,
             fecha_fin,
             fecha_constancia,
-            empresas ( nombre ),
-            actividades ( descripcion )
+            empresas ( nombre )
           )
         `);
 
@@ -92,36 +90,27 @@ const Page = () => {
         .from("empresas")
         .select("*");
 
-      const {
-        data: actividadesData,
-        error: actividadesError,
-      } = await supabase.from("actividades").select("*");
-
       if (
         estudiantesError ||
         programasError ||
-        empresasError ||
-        actividadesError
+        empresasError
       ) {
         console.error(
           "Error fetching data:",
           estudiantesError ||
             programasError ||
-            empresasError ||
-            actividadesError
+            empresasError
         );
         setError(
           estudiantesError?.message ||
             programasError?.message ||
-            empresasError?.message ||
-            actividadesError?.message
+            empresasError?.message
         );
       } else {
         setEstudiantes(estudiantesData);
         setFilteredEstudiantes(estudiantesData);
         setProgramas(programasData);
         setEmpresas(empresasData);
-        setActividades(actividadesData);
       }
       setLoading(false);
     };
@@ -137,11 +126,6 @@ const Page = () => {
   const getEmpresaNombre = (empresaId) => {
     const empresa = empresas.find((e) => e.id === empresaId);
     return empresa ? empresa.nombre : "";
-  };
-
-  const getActividadDescripcion = (actividadId) => {
-    const actividad = actividades.find((a) => a.id === actividadId);
-    return actividad ? actividad.descripcion : "";
   };
 
   const handleDelete = async (id) => {
@@ -213,20 +197,6 @@ const Page = () => {
       setNuevaEmpresa("");
     }
 
-    if (actividadId === "otro" && nuevaActividad) {
-      const { data, error } = await supabase
-        .from("actividades")
-        .insert([{ descripcion: nuevaActividad }])
-        .select();
-      if (error) {
-        alert("Error adding new actividad:", error.message);
-        return;
-      }
-      setActividadId(data[0].id.toString());
-      setActividades([...actividades, data[0]]);
-      setNuevaActividad("");
-    }
-
     const { data, error } = await supabase
       .from("estudiantes")
       .insert([
@@ -252,10 +222,10 @@ const Page = () => {
           {
             estudiante_id: newStudent.id,
             empresa_id: empresaId,
-            actividad_id: actividadId,
+            actividad_descripcion: actividadDescripcion,
             fecha_inicio: fechaInicio,
-            fecha_fin: fechaFin,
-            fecha_constancia: fechaConstancia,
+            fecha_fin: fechaFin || null,
+            fecha_constancia: fechaConstancia || null,
           },
         ])
         .select();
@@ -270,7 +240,7 @@ const Page = () => {
         setNumeroControl("");
         setProgramaId("");
         setEmpresaId("");
-        setActividadId("");
+        setActividadDescripcion("");
         setFechaInicio("");
         setFechaFin("");
         setFechaConstancia("");
@@ -296,20 +266,6 @@ const Page = () => {
       setNuevaEmpresa("");
     }
 
-    if (actividadId === "otro" && nuevaActividad) {
-      const { data, error } = await supabase
-        .from("actividades")
-        .insert([{ descripcion: nuevaActividad }])
-        .select();
-      if (error) {
-        alert("Error adding new actividad:", error.message);
-        return;
-      }
-      setActividadId(data[0].id.toString());
-      setActividades([...actividades, data[0]]);
-      setNuevaActividad("");
-    }
-
     const { data: updatedEstudiante, error: estudianteError } = await supabase
       .from("estudiantes")
       .update({
@@ -330,7 +286,7 @@ const Page = () => {
         .from("servicio_social")
         .update({
           empresa_id: empresaId || null,
-          actividad_id: actividadId || null,
+          actividad_descripcion: actividadDescripcion || null,
           fecha_inicio: fechaInicio || null,
           fecha_fin: fechaFin || null,
           fecha_constancia: fechaConstancia || null,
@@ -368,7 +324,7 @@ const Page = () => {
     setNumeroControl(estudiante.numero_control);
     setProgramaId(estudiante.programa_id.toString());
     setEmpresaId(servicioSocial.empresa_id ? servicioSocial.empresa_id.toString() : "");
-    setActividadId(servicioSocial.actividad_id ? servicioSocial.actividad_id.toString() : "");
+    setActividadDescripcion(servicioSocial.actividad_descripcion || "");
     setFechaInicio(servicioSocial.fecha_inicio || "");
     setFechaFin(servicioSocial.fecha_fin || "");
     setFechaConstancia(servicioSocial.fecha_constancia || "");
@@ -383,7 +339,7 @@ const Page = () => {
       const empresaNombre =
         estudiante.servicio_social?.[0]?.empresas?.nombre?.toLowerCase() || "";
       const actividadDescripcion =
-        estudiante.servicio_social?.[0]?.actividades?.descripcion?.toLowerCase() ||
+        estudiante.servicio_social?.[0]?.actividad_descripcion?.toLowerCase() ||
         "";
       return (
         estudiante.nombre.toLowerCase().includes(term.toLowerCase()) ||
@@ -428,10 +384,10 @@ const Page = () => {
           break;
         case "actividad":
           aValue =
-            a.servicio_social?.[0]?.actividades?.descripcion?.toLowerCase() ||
+            a.servicio_social?.[0]?.actividad_descripcion?.toLowerCase() ||
             "";
           bValue =
-            b.servicio_social?.[0]?.actividades?.descripcion?.toLowerCase() ||
+            b.servicio_social?.[0]?.actividad_descripcion?.toLowerCase() ||
             "";
           break;
         case "fecha_inicio":
@@ -489,7 +445,7 @@ const Page = () => {
           estudiante.nombre,
           getProgramaNombre(estudiante.programa_id),
           getEmpresaNombre(servicioSocial.empresa_id),
-          getActividadDescripcion(servicioSocial.actividad_id),
+          servicioSocial.actividad_descripcion,
           servicioSocial.fecha_inicio,
           servicioSocial.fecha_fin,
           servicioSocial.fecha_constancia,
@@ -533,15 +489,25 @@ const Page = () => {
         <TableCaption>Lista de Estudiantes</TableCaption>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[100px]" onClick={() => handleSort("id")}>Número</TableHead>
-            <TableHead onClick={() => handleSort("numero_control")}>Número de Control</TableHead>
+            <TableHead className="w-[100px]" onClick={() => handleSort("id")}>
+              Número
+            </TableHead>
+            <TableHead onClick={() => handleSort("numero_control")}>
+              Número de Control
+            </TableHead>
             <TableHead onClick={() => handleSort("nombre")}>Nombre</TableHead>
             <TableHead onClick={() => handleSort("programa")}>Programa</TableHead>
             <TableHead onClick={() => handleSort("empresa")}>Empresa</TableHead>
-            <TableHead onClick={() => handleSort("actividad")}>Actividad</TableHead>
-            <TableHead onClick={() => handleSort("fecha_inicio")}>Fecha de Inicio</TableHead>
+            <TableHead onClick={() => handleSort("actividad")}>
+              Actividad
+            </TableHead>
+            <TableHead onClick={() => handleSort("fecha_inicio")}>
+              Fecha de Inicio
+            </TableHead>
             <TableHead onClick={() => handleSort("fecha_fin")}>Fecha de Fin</TableHead>
-            <TableHead onClick={() => handleSort("fecha_constancia")}>Fecha de Constancia</TableHead>
+            <TableHead onClick={() => handleSort("fecha_constancia")}>
+              Fecha de Constancia
+            </TableHead>
             <TableHead>Acciones</TableHead>
           </TableRow>
         </TableHeader>
@@ -553,15 +519,9 @@ const Page = () => {
                 <TableCell className="font-medium">{estudiante.id}</TableCell>
                 <TableCell>{estudiante.numero_control}</TableCell>
                 <TableCell>{estudiante.nombre}</TableCell>
-                <TableCell>
-                  {getProgramaNombre(estudiante.programa_id)}
-                </TableCell>
-                <TableCell>
-                  {getEmpresaNombre(servicioSocial.empresa_id)}
-                </TableCell>
-                <TableCell>
-                  {getActividadDescripcion(servicioSocial.actividad_id)}
-                </TableCell>
+                <TableCell>{getProgramaNombre(estudiante.programa_id)}</TableCell>
+                <TableCell>{getEmpresaNombre(servicioSocial.empresa_id)}</TableCell>
+                <TableCell>{servicioSocial.actividad_descripcion}</TableCell>
                 <TableCell>{servicioSocial.fecha_inicio}</TableCell>
                 <TableCell>{servicioSocial.fecha_fin}</TableCell>
                 <TableCell>{servicioSocial.fecha_constancia}</TableCell>
@@ -619,9 +579,7 @@ const Page = () => {
                             </Label>
                             <Select
                               value={programaId}
-                              onValueChange={(value) =>
-                                setProgramaId(value)
-                              }
+                              onValueChange={(value) => setProgramaId(value)}
                             >
                               <SelectTrigger className="col-span-3">
                                 <SelectValue />
@@ -683,60 +641,24 @@ const Page = () => {
                                 id="nueva-empresa"
                                 value={nuevaEmpresa}
                                 className="col-span-3"
-                                onChange={(e) =>
-                                  setNuevaEmpresa(e.target.value)
-                                }
+                                onChange={(e) => setNuevaEmpresa(e.target.value)}
                               />
                             </div>
                           )}
                           <div className="grid grid-cols-4 items-center gap-4">
                             <Label
-                              htmlFor="edit-actividadId"
+                              htmlFor="edit-actividadDescripcion"
                               className="text-right"
                             >
                               Actividad
                             </Label>
-                            <Select
-                              value={actividadId}
-                              onValueChange={(value) => setActividadId(value)}
-                            >
-                              <SelectTrigger className="col-span-3">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectGroup>
-                                  <SelectLabel>Actividades</SelectLabel>
-                                  {actividades.map((actividad) => (
-                                    <SelectItem
-                                      key={actividad.id}
-                                      value={actividad.id.toString()}
-                                    >
-                                      {actividad.descripcion}
-                                    </SelectItem>
-                                  ))}
-                                  <SelectItem value="otro">Otro</SelectItem>
-                                </SelectGroup>
-                              </SelectContent>
-                            </Select>
+                            <Input
+                              id="edit-actividadDescripcion"
+                              value={actividadDescripcion}
+                              className="col-span-3"
+                              onChange={(e) => setActividadDescripcion(e.target.value)}
+                            />
                           </div>
-                          {actividadId === "otro" && (
-                            <div className="grid grid-cols-4 items-center gap-4">
-                              <Label
-                                htmlFor="nueva-actividad"
-                                className="text-right"
-                              >
-                                Nueva Actividad
-                              </Label>
-                              <Input
-                                id="nueva-actividad"
-                                value={nuevaActividad}
-                                className="col-span-3"
-                                onChange={(e) =>
-                                  setNuevaActividad(e.target.value)
-                                }
-                              />
-                            </div>
-                          )}
                           <div className="grid grid-cols-4 items-center gap-4">
                             <Label
                               htmlFor="edit-fechaInicio"
@@ -779,9 +701,7 @@ const Page = () => {
                               type="date"
                               value={fechaConstancia}
                               className="col-span-3"
-                              onChange={(e) =>
-                                setFechaConstancia(e.target.value)
-                              }
+                              onChange={(e) => setFechaConstancia(e.target.value)}
                             />
                           </div>
                         </div>
@@ -843,9 +763,7 @@ const Page = () => {
         </TableBody>
         <TableFooter>
           <TableRow>
-            <TableCell colSpan={10}>
-              Total de Estudiantes: {estudiantes.length}
-            </TableCell>
+            <TableCell colSpan={10}>Total de Estudiantes: {estudiantes.length}</TableCell>
           </TableRow>
         </TableFooter>
       </Table>
@@ -955,45 +873,16 @@ const Page = () => {
                 </div>
               )}
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="actividadId" className="text-right">
+                <Label htmlFor="actividadDescripcion" className="text-right">
                   Actividad
                 </Label>
-                <Select
-                  value={actividadId}
-                  onValueChange={(value) => setActividadId(value)}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectLabel>Actividades</SelectLabel>
-                      {actividades.map((actividad) => (
-                        <SelectItem
-                          key={actividad.id}
-                          value={actividad.id.toString()}
-                        >
-                          {actividad.descripcion}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="otro">Otro</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="actividadDescripcion"
+                  value={actividadDescripcion}
+                  className="col-span-3"
+                  onChange={(e) => setActividadDescripcion(e.target.value)}
+                />
               </div>
-              {actividadId === "otro" && (
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="nueva-actividad" className="text-right">
-                    Nueva Actividad
-                  </Label>
-                  <Input
-                    id="nueva-actividad"
-                    value={nuevaActividad}
-                    className="col-span-3"
-                    onChange={(e) => setNuevaActividad(e.target.value)}
-                  />
-                </div>
-              )}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="fechaInicio" className="text-right">
                   Fecha de Inicio
