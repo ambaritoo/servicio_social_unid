@@ -69,17 +69,7 @@ const Page = () => {
       const {
         data: estudiantesData,
         error: estudiantesError,
-      } = await supabase.from("estudiantes").select(`
-          *,
-          servicio_social (
-            empresa_id,
-            actividad_descripcion,
-            fecha_inicio,
-            fecha_fin,
-            fecha_constancia,
-            empresas ( nombre )
-          )
-        `);
+      } = await supabase.from("estudiantes").select("*");
 
       const {
         data: programasData,
@@ -90,16 +80,10 @@ const Page = () => {
         .from("empresas")
         .select("*");
 
-      if (
-        estudiantesError ||
-        programasError ||
-        empresasError
-      ) {
+      if (estudiantesError || programasError || empresasError) {
         console.error(
           "Error fetching data:",
-          estudiantesError ||
-            programasError ||
-            empresasError
+          estudiantesError || programasError || empresasError
         );
         setError(
           estudiantesError?.message ||
@@ -211,10 +195,7 @@ const Page = () => {
     if (error) {
       alert("Error adding student:", error.message);
     } else {
-      const newStudent = {
-        ...data[0],
-        servicio_social: [],
-      };
+      const newStudent = data[0];
 
       const { data: servicioData, error: servicioError } = await supabase
         .from("servicio_social")
@@ -384,11 +365,9 @@ const Page = () => {
           break;
         case "actividad":
           aValue =
-            a.servicio_social?.[0]?.actividad_descripcion?.toLowerCase() ||
-            "";
+            a.servicio_social?.[0]?.actividad_descripcion?.toLowerCase() || "";
           bValue =
-            b.servicio_social?.[0]?.actividad_descripcion?.toLowerCase() ||
-            "";
+            b.servicio_social?.[0]?.actividad_descripcion?.toLowerCase() || "";
           break;
         case "fecha_inicio":
           aValue = a.servicio_social?.[0]?.fecha_inicio || "";
