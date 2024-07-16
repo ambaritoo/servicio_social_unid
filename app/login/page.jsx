@@ -15,13 +15,16 @@ export default function LoginPage() {
     e.preventDefault()
     setError('') // Clear previous errors
     console.log('Iniciando sesión...')
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data: { session }, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       console.error('Error al iniciar sesión:', error.message)
       setError(error.message)
     } else {
       console.log('Inicio de sesión exitoso')
-      router.push('/estudiantes') // Redirigir a la página de estudiantes
+      if (session) {
+        localStorage.setItem('supabase.auth.token', JSON.stringify(session))
+        router.push('/estudiantes') // Redirigir a la página de estudiantes
+      }
     }
   }
 

@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import SiteLayout from "../layout/SiteLayout";
 import { supabase } from "@/database/supabaseClient";
+import ProtectedRoute from "@/components/protectdRoute/protectedRoute";
+
 import {
   Table,
   TableBody,
@@ -156,62 +158,53 @@ const Page = () => {
 
   const handleAddStudent = async (event) => {
     event.preventDefault();
-  
-    try {
-      const { data: existingStudent, error: existingError } = await supabase
-        .from("estudiantes")
-        .select("*")
-        .eq("numero_control", numeroControl);
-  
-      if (existingError) {
-        throw new Error(existingError.message);
-      }
-  
-      if (existingStudent && existingStudent.length > 0) {
-        alert("El número de control ya existe. No se puede duplicar.");
+
+    const { data: existingStudent, error: existingError } = await supabase
+      .from("estudiantes")
+      .select("*")
+      .eq("numero_control", numeroControl);
+
+    if (existingStudent && existingStudent.length > 0) {
+      alert("El número de control ya existe. No se puede duplicar.");
+      return;
+    }
+
+    if (empresaId === "otro" && nuevaEmpresa) {
+      const { data, error } = await supabase
+        .from("empresas")
+        .insert([{ nombre: nuevaEmpresa }])
+        .select();
+      if (error) {
+        alert("Error adding new empresa:", error.message);
         return;
       }
-  
-      let newEmpresaId = empresaId;
-  
-      if (empresaId === "otro" && nuevaEmpresa) {
-        const { data, error } = await supabase
-          .from("empresas")
-          .insert([{ nombre: nuevaEmpresa }])
-          .select();
-  
-        if (error) {
-          throw new Error(error.message);
-        }
-  
-        newEmpresaId = data[0].id.toString();
-        setEmpresas([...empresas, data[0]]);
-        setNuevaEmpresa("");
-      }
-  
-      const { data: studentData, error: studentError } = await supabase
-        .from("estudiantes")
-        .insert([
-          {
-            nombre,
-            numero_control: numeroControl,
-            programa_id: programaId,
-          },
-        ])
-        .select();
-  
-      if (studentError) {
-        throw new Error(studentError.message);
-      }
-  
-      const newStudent = studentData[0];
-  
+      setEmpresaId(data[0].id.toString());
+      setEmpresas([...empresas, data[0]]);
+      setNuevaEmpresa("");
+    }
+
+    const { data, error } = await supabase
+      .from("estudiantes")
+      .insert([
+        {
+          nombre,
+          numero_control: numeroControl,
+          programa_id: programaId,
+        },
+      ])
+      .select();
+
+    if (error) {
+      alert("Error adding student:", error.message);
+    } else {
+      const newStudent = data[0];
+
       const { data: servicioData, error: servicioError } = await supabase
         .from("servicio_social")
         .insert([
           {
             estudiante_id: newStudent.id,
-            empresa_id: newEmpresaId,
+            empresa_id: empresaId,
             actividad_descripcion: actividadDescripcion,
             fecha_inicio: fechaInicio,
             fecha_fin: fechaFin || null,
@@ -219,29 +212,25 @@ const Page = () => {
           },
         ])
         .select();
-  
+
       if (servicioError) {
-        throw new Error(servicioError.message);
+        alert("Error adding service social:", servicioError.message);
+      } else {
+        newStudent.servicio_social = [servicioData[0]];
+        setEstudiantes([...estudiantes, newStudent]);
+        setFilteredEstudiantes([...filteredEstudiantes, newStudent]);
+        setNombre("");
+        setNumeroControl("");
+        setProgramaId("");
+        setEmpresaId("");
+        setActividadDescripcion("");
+        setFechaInicio("");
+        setFechaFin("");
+        setFechaConstancia("");
+        setIsAddOpen(false);
       }
-  
-      newStudent.servicio_social = [servicioData[0]];
-      setEstudiantes([...estudiantes, newStudent]);
-      setFilteredEstudiantes([...filteredEstudiantes, newStudent]);
-      setNombre("");
-      setNumeroControl("");
-      setProgramaId("");
-      setEmpresaId("");
-      setActividadDescripcion("");
-      setFechaInicio("");
-      setFechaFin("");
-      setFechaConstancia("");
-      setIsAddOpen(false);
-    } catch (error) {
-      alert("Error: " + error.message);
     }
   };
-  
-  
 
   const handleEditStudent = async (event) => {
     event.preventDefault();
@@ -922,4 +911,4 @@ const Page = () => {
   );
 };
 
-export default Page;
+export default ProtectedRoute(Page);
